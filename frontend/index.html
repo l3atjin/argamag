@@ -279,6 +279,29 @@ textarea.form-control{resize:vertical;min-height:60px}
 </head>
 <body>
 
+<!-- Login overlay: hidden by default; init() shows it if /api/auth/me returns 401 -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:#f7f7f7;align-items:center;justify-content:center">
+  <form onsubmit="doLogin(event)" style="background:#fff;padding:32px 28px;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.08);width:340px;max-width:90vw">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:32px;margin-bottom:4px">🐎</div>
+      <div style="font-size:18px;font-weight:600">Аргамаг</div>
+      <div style="font-size:11px;color:#888">Equine Registry</div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:12px;color:#555;margin-bottom:4px">Хэрэглэгчийн нэр</label>
+      <input id="login-username" type="text" autocomplete="username" required autofocus
+             style="width:100%;padding:9px 11px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:18px">
+      <label style="display:block;font-size:12px;color:#555;margin-bottom:4px">Нууц үг</label>
+      <input id="login-password" type="password" autocomplete="current-password" required
+             style="width:100%;padding:9px 11px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box">
+    </div>
+    <div id="login-error" style="color:#c00;font-size:12px;margin-bottom:12px;min-height:16px"></div>
+    <button id="login-submit" type="submit" class="btn btn-primary" style="width:100%;padding:10px;font-size:14px">Нэвтрэх</button>
+  </form>
+</div>
+
 <div class="sidebar">
   <div class="sidebar-logo">
     <div class="sidebar-logo-title"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16' height='16'%3E%3Ctext y='18' font-size='18'%3E🐎%3C/text%3E%3C/svg%3E" style="vertical-align:middle;margin-right:4px"> Аргамаг</div>
@@ -305,6 +328,10 @@ textarea.form-control{resize:vertical;min-height:60px}
       <div class="ss-item"><div class="ss-val" id="ss-total">—</div><div class="ss-lbl">Нийт</div></div>
       <div class="ss-item"><div class="ss-val" id="ss-azarga">—</div><div class="ss-lbl">Азарга</div></div>
       <div class="ss-item"><div class="ss-val" id="ss-guu">—</div><div class="ss-lbl">Гүү</div></div>
+    </div>
+    <div style="margin-top:12px;padding-top:8px;border-top:1px solid #e8e8e8;font-size:11px;color:#666">
+      <div id="current-user-label" style="margin-bottom:4px"></div>
+      <a href="#" onclick="doLogout();return false" style="color:#888;text-decoration:none;font-size:10px">↪ Гарах</a>
     </div>
   </div>
 </div>
@@ -602,9 +629,64 @@ function notify(msg, type='ok') {
 }
 
 async function api(path, opts={}) {
+  opts.credentials = 'include';
   const r = await fetch(API + path, opts);
+  if (r.status === 401) {
+    showLoginScreen();
+    throw new Error('Not authenticated');
+  }
   if (!r.ok) throw new Error(await r.text());
   return r.json();
+}
+
+function showLoginScreen() {
+  const el = document.getElementById('login-screen');
+  if (el) el.style.display = 'flex';
+}
+function hideLoginScreen() {
+  const el = document.getElementById('login-screen');
+  if (el) el.style.display = 'none';
+}
+
+async function doLogin(ev) {
+  ev.preventDefault();
+  const u = document.getElementById('login-username').value.trim();
+  const p = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-submit');
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Шалгаж байна...';
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: u, password: p})
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      errEl.textContent = j.detail || 'Нэвтрэх боломжгүй';
+      return;
+    }
+    const me = await r.json();
+    window._currentUser = me;
+    hideLoginScreen();
+    bootApp();
+  } catch (e) {
+    errEl.textContent = 'Сүлжээний алдаа: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Нэвтрэх';
+  }
+}
+
+async function doLogout() {
+  await fetch('/api/auth/logout', {method: 'POST', credentials: 'include'});
+  window._currentUser = null;
+  showLoginScreen();
+  // Reload to clear any cached UI state
+  setTimeout(() => location.reload(), 200);
 }
 
 const pageTitles = {dashboard:'📊 Ерөнхий тойм',herd:'Сүргийн бүртгэл',horse:'Адууны жагсаалт','horse-nemeh':'Адуу нэмэх',hialbar:'Хялбар нэмэх',stable:'Зүчээ ба Бэлчээр',task:'Ажил төлөвлөх',trainer:'🤠 Уяачийн бүртгэл',naadam:'🏇 Наадмын бүртгэл',practice_race:'🏆 Уралдааны дүн',training_session:'🏃 Морь сойх',finance_record:'Санхүү',contact:'Эзэмшигч / Малчин',option:'Тохируулга'};
@@ -6206,13 +6288,35 @@ function showQuick(title, body, saveFn) {
 function closeQuick() { document.getElementById('quick-modal').classList.remove('open'); quickSaveFn=null; }
 
 // ── INIT ──
-async function init() {
+async function bootApp() {
+  // Update the sidebar with the logged-in user's name
+  if (window._currentUser) {
+    const lbl = document.getElementById('current-user-label');
+    if (lbl) lbl.textContent = window._currentUser.full_name || window._currentUser.username;
+  }
   await loadConfigs();
   await loadStats();
-  // Морь сойхын ажлын төрлүүд татах
   api('/api/training_sessions/types').then(function(t){ window._soikhTurluud = t||[]; }).catch(function(){});
   showPage('dashboard');
-  setInterval(loadStats, 60000);
+  if (!window._statsInterval) {
+    window._statsInterval = setInterval(loadStats, 60000);
+  }
+}
+
+async function init() {
+  // Auth-aware boot: check session first, show login or app accordingly.
+  try {
+    const r = await fetch('/api/auth/me', {credentials: 'include'});
+    if (r.ok) {
+      window._currentUser = await r.json();
+      hideLoginScreen();
+      await bootApp();
+    } else {
+      showLoginScreen();
+    }
+  } catch (e) {
+    showLoginScreen();
+  }
 }
 init();
 
