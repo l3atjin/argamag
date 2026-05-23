@@ -1,0 +1,35 @@
+# ── User data (lives in backups, not git) ──
+data/horse.db
+data/*.db
+*.db
+backend/horse.db
+frontend/uploads/
+
+# ── Legacy source data (large binary .mdb files from old system) ──
+noots/
+noots2/
+
+# ── Manual backups (git owns history now) ──
+frontend/index.html.bak
+frontend/index.html.bak2
+*.bak
+*.bak2
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.env
+.env.local
+
+# ── macOS ──
+.DS_Store
+
+# ── Editors ──
+.vscode/
+.idea/
+*.swp
