@@ -204,7 +204,7 @@ def horse_export_csv(
     writer.writerow(['Нэр','ID','№','Хүйс','Зүс','Төрсөн','Угшил','Эцэг','Эх','Эзэмшигч','Сүрэг','Статус','Чип','Паспорт'])
     for r in rows:
         writer.writerow([
-            r['name']or'', r['horse_id']or'', r['number']or'',
+            r['name']or'', r['registration_code']or'', r['number']or'',
             HUISMAP.get(r['sex'],r['sex']or''),
             r['color_name']or'', r['birth_date']or'', r['breed_name']or'',
             r['sire_name']or'', r['dam_name']or'', r['owner_name']or'',
@@ -247,7 +247,7 @@ def horse_check_registration(registration_code: str, exclude_id: Optional[int]=N
     return {"exists": False}
 
 @app.get("/api/horses/gelding_eligible")
-def gelding_eligible(owner_id: Optional[int]=None, nas_min: int=3, nas_max: Optional[int]=None):
+def gelding_eligible(owner_id: Optional[int]=None, age_min: int=3, age_max: Optional[int]=None):
     import datetime
     conn = get_db()
     this_year = datetime.date.today().year
@@ -269,8 +269,8 @@ def gelding_eligible(owner_id: Optional[int]=None, nas_min: int=3, nas_max: Opti
         if r['id'] in seen: continue
         seen.add(r['id'])
         age = this_year - int(r['birth_date'][:4]) + 1
-        if age < nas_min: continue
-        if nas_max and age > nas_max: continue
+        if age < age_min: continue
+        if age_max and age > age_max: continue
         result.append({'id': r['id'], 'name': r['name'], 'birth_date': r['birth_date'],
                       'sex': r['sex'], 'registration_code': r['registration_code'], 'age': age,
                       'owner_name': r['owner_name'], 'owner_id': r['ez_id']})
@@ -379,19 +379,19 @@ def age_label(birth_date: str, sex: str, gelded: int = 0) -> str:
         return ""
     today = date.today()
     # Монгол тооллоор: төрсөн жил = 1 нас
-    nas = today.year - born.year + 1
+    age = today.year - born.year + 1
     er = sex in ('stallion', 'er')
-    if nas == 1:
+    if age == 1:
         return "Эр унага" if er else "Эм унага"
-    elif nas == 2:
+    elif age == 2:
         return "Эр даага" if er else "Охин даага"
-    elif nas == 3:
+    elif age == 3:
         return "Шүдлэн үрээ" if er else "Шүдлэн байдас"
-    elif nas == 4:
+    elif age == 4:
         return "Хязаалан үрээ" if er else "Хязаалан байдас"
-    elif nas == 5:
+    elif age == 5:
         return "Соёолон үрээ" if er else "Соёолон байдас"
-    elif nas == 6:
+    elif age == 6:
         return "Хавчиг морь" if er else "Хавчиг гүү"
     else:
         if er:
@@ -890,7 +890,7 @@ def plan_delete(id: int):
 @app.get("/api/training_plans/summary")
 def plan_summary(trainer_id: Optional[int]=None, sar: Optional[str]=None):
     conn = get_db()
-    sql = """SELECT p.horse_id, p.status, COUNT(*) as too
+    sql = """SELECT p.horse_id, p.status, COUNT(*) as count
              FROM training_plan p WHERE 1=1"""
     params = []
     if trainer_id: sql += " AND p.trainer_id=?"; params.append(trainer_id)
@@ -1456,28 +1456,28 @@ def dashboard():
 
     # ── Насны бүлэг — 6 бүлэг ──
     # 1=Унага, 2=Даага, 3=Шүдлэн, 4=Хязаалан, 5=Соёолон, 6+=Морь/Гүү
-    nas_groups = [
+    age_groups = [
         ('Унага',1,1),('Даага',2,2),('Шүдлэн',3,3),
         ('Хязаалан',4,4),('Соёолон',5,5),('Морь/Гүү',6,99)
     ]
-    nas_data = []
-    for lbl,mn,mx in nas_groups:
+    age_data = []
+    for lbl,mn,mx in age_groups:
         for h in ['stallion','mare']:
             n = conn.execute(
                 "SELECT COUNT(*) FROM horse WHERE sex=? AND active=1 AND birth_date IS NOT NULL AND (?-CAST(strftime('%Y',birth_date) AS INT)+1) BETWEEN ? AND ?",
                 (h, this_yr, mn, mx)).fetchone()[0]
-            nas_data.append({'nas':lbl,'sex':h,'too':n})
+            age_data.append({'age':lbl,'sex':h,'count':n})
 
     # ── Сүргийн бүрэлдэхүүн ──
     herd_data = [dict(r) for r in conn.execute(
-        "SELECT s.id, s.name, COUNT(a.id) as too FROM herd s LEFT JOIN horse a ON a.herd_id=s.id AND a.active=1 GROUP BY s.id ORDER BY too DESC LIMIT 12").fetchall()]
+        "SELECT s.id, s.name, COUNT(a.id) as count FROM herd s LEFT JOIN horse a ON a.herd_id=s.id AND a.active=1 GROUP BY s.id ORDER BY count DESC LIMIT 12").fetchall()]
     herd_all = [dict(r) for r in conn.execute(
         "SELECT s.id, s.name FROM herd s WHERE s.active=1 ORDER BY s.name").fetchall()]
 
     # ── Эзэмшигчийн жагсаалт ──
-    ezen_data = [dict(r) for r in conn.execute(
-        "SELECT h.id, h.name, COUNT(DISTINCT ae.horse_id) as too FROM contact h JOIN horse_owner ae ON h.id=ae.owner_id JOIN horse a ON ae.horse_id=a.id AND a.active=1 GROUP BY h.id ORDER BY too DESC LIMIT 8").fetchall()]
-    ezen_all = [dict(r) for r in conn.execute(
+    owner_data = [dict(r) for r in conn.execute(
+        "SELECT h.id, h.name, COUNT(DISTINCT ae.horse_id) as count FROM contact h JOIN horse_owner ae ON h.id=ae.owner_id JOIN horse a ON ae.horse_id=a.id AND a.active=1 GROUP BY h.id ORDER BY count DESC LIMIT 8").fetchall()]
+    owner_all = [dict(r) for r in conn.execute(
         "SELECT h.id, h.name FROM contact h WHERE h.type='owner_text' ORDER BY h.name").fetchall()]
 
     # ── Энэ жилийн унагалалт ──
@@ -1516,7 +1516,7 @@ def dashboard():
     return {
         "total":total,"stallion":azarga,"mare":guu,
         "in_training_count":in_training_count,"herd_count":herd_count,
-        "nas_data":nas_data,"herd_data":herd_data,"herd_all":herd_all,"ezen_data":ezen_data,"ezen_all":ezen_all,
+        "age_data":age_data,"herd_data":herd_data,"herd_all":herd_all,"owner_data":owner_data,"owner_all":owner_all,
         "guu_4plus":guu_4plus,
         "unagalsan_guu":unagalsan_guu,"total_unaga":total_unaga,
         "unagalalt_pct":tol_avalt_pct,"foaling":heel_hayas,"suvairsan_guu":suvairsan_guu,
@@ -1752,16 +1752,16 @@ def dashboard_butets(herd_id: Optional[int]=None, owner_id: Optional[int]=None):
     ef = (f" AND EXISTS(SELECT 1 FROM horse_owner ae WHERE ae.horse_id=a.id AND ae.owner_id={owner_id})" if owner_id else "")
     base = f"WHERE a.active=1{sf}{ef}"
 
-    zus_rows = conn.execute(f"SELECT t.name, COUNT(a.id) as too FROM horse a LEFT JOIN option t ON a.color_id=t.id {base} GROUP BY a.color_id ORDER BY too DESC LIMIT 8").fetchall()
-    breed_text_rows = conn.execute(f"SELECT t.name, COUNT(a.id) as too FROM horse a LEFT JOIN option t ON a.breed_id=t.id {base} GROUP BY a.breed_id ORDER BY too DESC").fetchall()
-    az_rows = conn.execute(f"SELECT e.name as name, COUNT(a.id) as too FROM horse a JOIN horse e ON a.sire_id=e.id {base} AND e.sex IN ('stallion','er') GROUP BY a.sire_id ORDER BY too DESC LIMIT 6").fetchall()
-    guu_rows = conn.execute(f"SELECT e.name as name, COUNT(a.id) as too FROM horse a JOIN horse e ON a.dam_id=e.id {base} AND e.sex IN ('mare','ohin') GROUP BY a.dam_id ORDER BY too DESC LIMIT 6").fetchall()
+    zus_rows = conn.execute(f"SELECT t.name, COUNT(a.id) as count FROM horse a LEFT JOIN option t ON a.color_id=t.id {base} GROUP BY a.color_id ORDER BY count DESC LIMIT 8").fetchall()
+    breed_text_rows = conn.execute(f"SELECT t.name, COUNT(a.id) as count FROM horse a LEFT JOIN option t ON a.breed_id=t.id {base} GROUP BY a.breed_id ORDER BY count DESC").fetchall()
+    az_rows = conn.execute(f"SELECT e.name as name, COUNT(a.id) as count FROM horse a JOIN horse e ON a.sire_id=e.id {base} AND e.sex IN ('stallion','er') GROUP BY a.sire_id ORDER BY count DESC LIMIT 6").fetchall()
+    guu_rows = conn.execute(f"SELECT e.name as name, COUNT(a.id) as count FROM horse a JOIN horse e ON a.dam_id=e.id {base} AND e.sex IN ('mare','ohin') GROUP BY a.dam_id ORDER BY count DESC LIMIT 6").fetchall()
     conn.close()
     return {
-        "color": [{"name": r["name"] or "Тодорхойгүй", "too": r["too"]} for r in zus_rows],
-        "breed_text": [{"name": r["name"] or "Тодорхойгүй", "too": r["too"]} for r in breed_text_rows],
-        "azarga_urtol": [{"name": r["name"], "too": r["too"]} for r in az_rows],
-        "guu_urtol": [{"name": r["name"], "too": r["too"]} for r in guu_rows]
+        "color": [{"name": r["name"] or "Тодорхойгүй", "count": r["count"]} for r in zus_rows],
+        "breed_text": [{"name": r["name"] or "Тодорхойгүй", "count": r["count"]} for r in breed_text_rows],
+        "stallion_offspring": [{"name": r["name"], "count": r["count"]} for r in az_rows],
+        "mare_offspring": [{"name": r["name"], "count": r["count"]} for r in guu_rows]
     }
 
 @app.get("/api/dashboard/growth")
@@ -1782,16 +1782,16 @@ def dashboard_osolt(herd_id: Optional[int]=None, owner_id: Optional[int]=None):
     return result
 
 @app.get("/api/dashboard/age_distribution")
-def dashboard_nas(herd_id: Optional[int]=None, owner_id: Optional[int]=None, on: Optional[int]=None):
+def dashboard_age(herd_id: Optional[int]=None, owner_id: Optional[int]=None, on: Optional[int]=None):
     import datetime
     conn = get_db()
     this_yr = on or datetime.date.today().year
-    nas_groups = [
+    age_groups = [
         ('Унага',1,1),('Даага',2,2),('Шүдлэн',3,3),
         ('Хязаалан',4,4),('Соёолон',5,5),('Морь/Гүү',6,99)
     ]
-    nas_data = []
-    for lbl,mn,mx in nas_groups:
+    age_data = []
+    for lbl,mn,mx in age_groups:
         for h in ['stallion','mare']:
             sql = """SELECT COUNT(*) FROM horse a WHERE a.sex=? AND a.active=1
                      AND a.birth_date IS NOT NULL
@@ -1804,11 +1804,11 @@ def dashboard_nas(herd_id: Optional[int]=None, owner_id: Optional[int]=None, on:
                 sql += " AND EXISTS(SELECT 1 FROM horse_owner ae WHERE ae.horse_id=a.id AND ae.owner_id=?)"
                 params.append(owner_id)
             n = conn.execute(sql, params).fetchone()[0]
-            nas_data.append({'nas':lbl,'sex':h,'too':n})
+            age_data.append({'age':lbl,'sex':h,'count':n})
     conn.close()
-    return nas_data
+    return age_data
 
-@app.get("/api/dashboard/naadam_stats")
+@app.get("/api/dashboard/naadam_statss")
 def dashboard_naadam_stat():
     """Наадмын амжилт — жилээр, насны ангиллаар (сүүлийн 5 жил)"""
     import datetime
@@ -1866,7 +1866,7 @@ def dashboard_urjil_trend():
 def reports_performance(
     trainer_id: Optional[int]=None,
     horse_id: Optional[int]=None,
-    horse_code: Optional[str]=None,
+    horse_registration_code: Optional[str]=None,
     ehleh: Optional[str]=None,
     duusah: Optional[str]=None
 ):
@@ -1879,7 +1879,7 @@ def reports_performance(
 
     params_plan = []
     sql_plan = """
-        SELECT p.horse_id, p.status, COUNT(*) as too, a.name as horse_name, a.registration_code as horse_code
+        SELECT p.horse_id, p.status, COUNT(*) as count, a.name as horse_name, a.registration_code as horse_registration_code
         FROM training_plan p
         JOIN horse a ON p.horse_id=a.id
         WHERE p.date BETWEEN ? AND ?
@@ -1887,13 +1887,13 @@ def reports_performance(
     params_plan = [ehleh, duusah]
     if trainer_id: sql_plan += " AND p.trainer_id=?"; params_plan.append(trainer_id)
     if horse_id: sql_plan += " AND p.horse_id=?"; params_plan.append(horse_id)
-    if horse_code: sql_plan += " AND a.registration_code LIKE ?"; params_plan.append(horse_code+'%')
+    if horse_registration_code: sql_plan += " AND a.registration_code LIKE ?"; params_plan.append(horse_registration_code+'%')
     sql_plan += " GROUP BY p.horse_id, p.status ORDER BY a.name"
     plan_rows = conn.execute(sql_plan, params_plan).fetchall()
 
     # training_session (хийгдсэн)
     sql_training = """
-        SELECT ms.horse_id, COUNT(*) as too, a.name as horse_name, a.registration_code as horse_code
+        SELECT ms.horse_id, COUNT(*) as count, a.name as horse_name, a.registration_code as horse_registration_code
         FROM training_session ms
         JOIN horse a ON ms.horse_id=a.id
         WHERE ms.date BETWEEN ? AND ?
@@ -1901,7 +1901,7 @@ def reports_performance(
     params_training = [ehleh, duusah]
     if trainer_id: sql_training += " AND ms.trainer_id=?"; params_training.append(trainer_id)
     if horse_id: sql_training += " AND ms.horse_id=?"; params_training.append(horse_id)
-    if horse_code: sql_training += " AND a.registration_code LIKE ?"; params_training.append(horse_code+'%')
+    if horse_registration_code: sql_training += " AND a.registration_code LIKE ?"; params_training.append(horse_registration_code+'%')
     sql_training += " GROUP BY ms.horse_id ORDER BY a.name"
     soikh_rows = conn.execute(sql_training, params_training).fetchall()
 
@@ -1910,23 +1910,23 @@ def reports_performance(
     for r in plan_rows:
         aid = r['horse_id']
         if aid not in horse_map:
-            horse_map[aid] = {'horse_id':aid,'horse_name':r['horse_name'],'horse_code':r['horse_code'],'tolvlosen':0,'hiisgdsn':0,'training_count':0}
-        if r['status']=='done': horse_map[aid]['hiisgdsn'] += r['too']
-        else: horse_map[aid]['tolvlosen'] += r['too']
+            horse_map[aid] = {'horse_id':aid,'horse_name':r['horse_name'],'horse_registration_code':r['horse_registration_code'],'planned_count':0,'done_count':0,'training_count':0}
+        if r['status']=='done': horse_map[aid]['done_count'] += r['count']
+        else: horse_map[aid]['planned_count'] += r['count']
     for r in soikh_rows:
         aid = r['horse_id']
         if aid not in horse_map:
-            horse_map[aid] = {'horse_id':aid,'horse_name':r['horse_name'],'horse_code':r['horse_code'],'tolvlosen':0,'hiisgdsn':0,'training_count':0}
-        horse_map[aid]['training_count'] = r['too']
+            horse_map[aid] = {'horse_id':aid,'horse_name':r['horse_name'],'horse_registration_code':r['horse_registration_code'],'planned_count':0,'done_count':0,'training_count':0}
+        horse_map[aid]['training_count'] = r['count']
 
     result = []
     for d in horse_map.values():
-        total = d['tolvlosen'] + d['hiisgdsn']
-        hiigdsen = d['hiisgdsn'] + d['training_count']
+        total = d['planned_count'] + d['done_count']
+        completed_count = d['done_count'] + d['training_count']
         d['total'] = total + d['training_count']
-        d['hiigdsen'] = hiigdsen
-        d['hiigdgui'] = max(0, total - d['hiisgdsn'])
-        d['pct'] = round(hiigdsen / d['total'] * 100) if d['total'] else 0
+        d['completed_count'] = completed_count
+        d['incomplete_count'] = max(0, total - d['done_count'])
+        d['pct'] = round(completed_count / d['total'] * 100) if d['total'] else 0
         result.append(d)
     conn.close()
     return sorted(result, key=lambda x: x['horse_name'])
@@ -1935,7 +1935,7 @@ def reports_performance(
 def reports_task_breakdown(
     trainer_id: Optional[int]=None,
     horse_id: Optional[int]=None,
-    horse_code: Optional[str]=None,
+    horse_registration_code: Optional[str]=None,
     ehleh: Optional[str]=None,
     duusah: Optional[str]=None
 ):
@@ -1948,31 +1948,31 @@ def reports_task_breakdown(
 
     result = {}
     # Plan-аас
-    sql = "SELECT p.type, COUNT(*) as too FROM training_plan p JOIN horse a ON p.horse_id=a.id WHERE p.date BETWEEN ? AND ?"
+    sql = "SELECT p.type, COUNT(*) as count FROM training_plan p JOIN horse a ON p.horse_id=a.id WHERE p.date BETWEEN ? AND ?"
     params = [ehleh, duusah]
     if trainer_id: sql += " AND p.trainer_id=?"; params.append(trainer_id)
     if horse_id: sql += " AND p.horse_id=?"; params.append(horse_id)
-    if horse_code: sql += " AND a.registration_code LIKE ?"; params.append(horse_code+'%')
-    sql += " GROUP BY p.type ORDER BY too DESC"
+    if horse_registration_code: sql += " AND a.registration_code LIKE ?"; params.append(horse_registration_code+'%')
+    sql += " GROUP BY p.type ORDER BY count DESC"
     for r in conn.execute(sql, params).fetchall():
-        result[r['type']] = result.get(r['type'],0) + r['too']
+        result[r['type']] = result.get(r['type'],0) + r['count']
     # training_session-аас
-    sql2 = "SELECT ms.type, COUNT(*) as too FROM training_session ms JOIN horse a ON ms.horse_id=a.id WHERE ms.date BETWEEN ? AND ?"
+    sql2 = "SELECT ms.type, COUNT(*) as count FROM training_session ms JOIN horse a ON ms.horse_id=a.id WHERE ms.date BETWEEN ? AND ?"
     params2 = [ehleh, duusah]
     if trainer_id: sql2 += " AND ms.trainer_id=?"; params2.append(trainer_id)
     if horse_id: sql2 += " AND ms.horse_id=?"; params2.append(horse_id)
-    if horse_code: sql2 += " AND a.registration_code LIKE ?"; params2.append(horse_code+'%')
-    sql2 += " GROUP BY ms.type ORDER BY too DESC"
+    if horse_registration_code: sql2 += " AND a.registration_code LIKE ?"; params2.append(horse_registration_code+'%')
+    sql2 += " GROUP BY ms.type ORDER BY count DESC"
     for r in conn.execute(sql2, params2).fetchall():
-        result[r['type']] = result.get(r['type'],0) + r['too']
+        result[r['type']] = result.get(r['type'],0) + r['count']
     conn.close()
-    return sorted([{'type':k,'too':v} for k,v in result.items()], key=lambda x:-x['too'])
+    return sorted([{'type':k,'count':v} for k,v in result.items()], key=lambda x:-x['count'])
 
 @app.get("/api/reports/daily_schedule")
 def reports_daily_schedule(
     trainer_id: Optional[int]=None,
     horse_id: Optional[int]=None,
-    horse_code: Optional[str]=None,
+    horse_registration_code: Optional[str]=None,
     ehleh: Optional[str]=None,
     duusah: Optional[str]=None
 ):
@@ -1985,22 +1985,22 @@ def reports_daily_schedule(
 
     rows = []
     # Plan
-    sql = """SELECT p.date, a.name as horse_name, a.registration_code as horse_code, p.type, p.status, 'plan' as src
+    sql = """SELECT p.date, a.name as horse_name, a.registration_code as horse_registration_code, p.type, p.status, 'plan' as src
              FROM training_plan p JOIN horse a ON p.horse_id=a.id
              WHERE p.date BETWEEN ? AND ?"""
     params = [ehleh, duusah]
     if trainer_id: sql += " AND p.trainer_id=?"; params.append(trainer_id)
     if horse_id: sql += " AND p.horse_id=?"; params.append(horse_id)
-    if horse_code: sql += " AND a.registration_code LIKE ?"; params.append(horse_code+'%')
+    if horse_registration_code: sql += " AND a.registration_code LIKE ?"; params.append(horse_registration_code+'%')
     rows += [dict(r) for r in conn.execute(sql+" ORDER BY p.date DESC", params).fetchall()]
     # training_session
-    sql2 = """SELECT ms.date, a.name as horse_name, a.registration_code as horse_code, ms.type, 'done' as status, 'soikh' as src
+    sql2 = """SELECT ms.date, a.name as horse_name, a.registration_code as horse_registration_code, ms.type, 'done' as status, 'soikh' as src
               FROM training_session ms JOIN horse a ON ms.horse_id=a.id
               WHERE ms.date BETWEEN ? AND ?"""
     params2 = [ehleh, duusah]
     if trainer_id: sql2 += " AND ms.trainer_id=?"; params2.append(trainer_id)
     if horse_id: sql2 += " AND ms.horse_id=?"; params2.append(horse_id)
-    if horse_code: sql2 += " AND a.registration_code LIKE ?"; params2.append(horse_code+'%')
+    if horse_registration_code: sql2 += " AND a.registration_code LIKE ?"; params2.append(horse_registration_code+'%')
     rows += [dict(r) for r in conn.execute(sql2+" ORDER BY ms.date DESC", params2).fetchall()]
     conn.close()
     return sorted(rows, key=lambda x: x['date'], reverse=True)

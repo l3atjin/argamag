@@ -50,23 +50,50 @@ def apply_endpoint_renames(text: str) -> str:
 
 def apply_identifier_renames(text: str) -> str:
     """
-    Apply identifier renames using a boundary that treats `_` as a separator.
-    Pattern: (?<![a-zA-Z0-9])X(?![a-zA-Z0-9])
+    Two-pass rename to catch both snake_case and camelCase identifiers:
 
-    This lets `aduu` match inside `aduu_list` (becomes `horse_list`) while
-    still rejecting matches inside identifiers like `naduuser`. Longest-first
-    ordering ensures compound renames (aduu_uyaach → horse_trainer) win over
-    component renames (aduu → horse).
+    Pass 1 - exact identifier boundaries: lets `aduu` match inside `aduu_list`
+             but not inside `aduuList` or unrelated identifiers like `naduuser`.
+
+    Pass 2 - camelCase prefix: matches `aduu` followed by an uppercase letter
+             (e.g. `aduuList`, `aduuId`) and renames the prefix, preserving the
+             suffix (`aduuList` -> `horseList`). Also handles plain trailing
+             `s` (e.g. `surgs` -> `herds`).
+
+    Longest-first ordering ensures compound renames win over components.
     """
     pairs = build_identifier_map()
-    # Filter out keys we never want auto-substituted (builtins, etc.)
     pairs = {k: v for k, v in pairs.items() if k not in SKIP_IDENTIFIERS}
     ordered = sorted(pairs.items(), key=lambda kv: -len(kv[0]))
+
+    # Pass 1: snake_case + standalone
     for old, new in ordered:
         text = re.sub(
             rf"(?<![a-zA-Z0-9]){re.escape(old)}(?![a-zA-Z0-9])",
             new, text
         )
+
+    # Pass 2: camelCase prefix and plural-s. Only consider renames where the
+    # OLD name is a single word (no underscores) — that's what produces
+    # camelCase identifiers like `aduuList`. The NEW name may be multi-word;
+    # we convert it to camelCase for the substitution.
+    def snake_to_camel(s: str) -> str:
+        parts = s.split("_")
+        return parts[0] + "".join(p[:1].upper() + p[1:] for p in parts[1:])
+
+    camel_renames = [(o, snake_to_camel(n)) for o, n in ordered if "_" not in o]
+    for old, new_camel in camel_renames:
+        # camelCase: aduuList -> horseList, sungaaList -> practiceRaceList
+        text = re.sub(
+            rf"(?<![a-zA-Z0-9]){re.escape(old)}(?=[A-Z])",
+            new_camel, text
+        )
+        # plural-s: surgs -> herds (only when followed by a non-identifier char)
+        text = re.sub(
+            rf"(?<![a-zA-Z0-9]){re.escape(old)}s(?![a-zA-Z0-9])",
+            new_camel + "s", text
+        )
+
     return text
 
 

@@ -11,8 +11,11 @@ compound names (e.g. aduu_ezeshigch) are renamed before their components
 """
 
 # Tables: live DB schema name -> new name.
-# `naadam` and `notification` keep their names intentionally.
+# `naadam` and `notification` keep their names intentionally (mapped to themselves
+# so their columns still get processed by the migration).
 TABLES = {
+    "naadam": "naadam",
+    "notification": "notification",
     "aduu_ezeshigch": "horse_owner",
     "aduu_uyaach": "horse_trainer",
     "aie_shinjilgee": "eia_test",
@@ -415,6 +418,23 @@ def build_identifier_map():
     pairs["niit"] = "total"
     pairs["ezen_id"] = "owner_id"
     pairs["uyaagdaj"] = "in_training_count"
+    # Dashboard / report payload keys (used by both backend and frontend)
+    pairs["nas"] = "age"
+    pairs["too"] = "count"
+    pairs["nas_data"] = "age_data"
+    pairs["nas_min"] = "age_min"
+    pairs["nas_max"] = "age_max"
+    pairs["nas_brutsleg"] = "age_breakdown"
+    pairs["ezen_data"] = "owner_data"
+    pairs["ezen_all"] = "owner_all"
+    pairs["urtol"] = "offspring"
+    pairs["azarga_urtol"] = "stallion_offspring"
+    pairs["guu_urtol"] = "mare_offspring"
+    pairs["hiisgdsn"] = "done_count"
+    pairs["tolvlosen"] = "planned_count"
+    pairs["hiigdsen"] = "completed_count"
+    pairs["hiigdgui"] = "incomplete_count"
+    pairs["horse_code"] = "horse_registration_code"
     pairs["aie"] = "eia_test"
     pairs["nokhon"] = "breeding_event"
     pairs["udam"] = "pedigree"
