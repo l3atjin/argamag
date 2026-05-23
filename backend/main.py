@@ -1,16 +1,43 @@
-from fastapi import FastAPI, HTTPException, Form
+from fastapi import FastAPI, HTTPException, Form, Depends, Response, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 import csv, io
 from pydantic import BaseModel
 from typing import Optional, List
 import os, sys
 sys.path.insert(0, os.path.dirname(__file__))
 from database import get_db, init_db
+from auth import (
+    hash_password, verify_password,
+    set_session_cookie, clear_session_cookie, read_session_token,
+    current_user, COOKIE_NAME,
+)
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+# CORS: open in dev. Lock to the production domain when deploying.
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], allow_credentials=True)
+
+
+# ── Auth middleware ──
+# All /api/* routes require a valid session cookie EXCEPT the auth endpoints
+# below. The SPA shell (/), static assets (/static/*), and uploads (/uploads/*)
+# are public; the SPA itself enforces login by calling /api/auth/me on boot.
+_PUBLIC_API_PATHS = {"/api/auth/login", "/api/auth/logout", "/api/auth/me"}
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        if path.startswith("/api/") and path not in _PUBLIC_API_PATHS:
+            token = request.cookies.get(COOKIE_NAME)
+            if not token or read_session_token(token) is None:
+                return JSONResponse({"detail": "Not authenticated"}, status_code=401)
+        return await call_next(request)
+
+
+app.add_middleware(AuthMiddleware)
 FRONTEND = os.path.join(os.path.dirname(__file__), "../frontend")
 if os.path.exists(FRONTEND):
     app.mount("/static", StaticFiles(directory=FRONTEND), name="static")
@@ -57,6 +84,38 @@ def startup():
 
 @app.get("/")
 def root(): return FileResponse(os.path.join(FRONTEND, "index.html"))
+
+
+# ── AUTH ──
+class LoginIn(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/api/auth/login")
+def auth_login(d: LoginIn, response: Response):
+    conn = get_db()
+    row = conn.execute(
+        "SELECT id, username, full_name, password_hash, active FROM user WHERE username=?",
+        (d.username,),
+    ).fetchone()
+    conn.close()
+    if not row or not row["active"] or not verify_password(d.password, row["password_hash"]):
+        raise HTTPException(401, "Хэрэглэгчийн нэр эсвэл нууц үг буруу байна")
+    set_session_cookie(response, row["id"])
+    return {"username": row["username"], "full_name": row["full_name"]}
+
+
+@app.post("/api/auth/logout")
+def auth_logout(response: Response):
+    clear_session_cookie(response)
+    return {"ok": True}
+
+
+@app.get("/api/auth/me")
+def auth_me(user: dict = Depends(current_user)):
+    return {"username": user["username"], "full_name": user["full_name"]}
+
 
 # ── STATS ──
 class GeldingIn(BaseModel):

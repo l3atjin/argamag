@@ -277,6 +277,16 @@ def init_db():
         category TEXT, notes TEXT, horse_id INTEGER
     );
 
+    -- ── USER (auth) ──
+    CREATE TABLE IF NOT EXISTS user (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        full_name TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        active INTEGER DEFAULT 1
+    );
+
     -- ── TRAINING PLAN ──
     CREATE TABLE IF NOT EXISTS training_plan (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

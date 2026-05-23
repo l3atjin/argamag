@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+pydantic
+bcrypt
+itsdangerous
+python-multipart
