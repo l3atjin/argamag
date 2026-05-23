@@ -24,62 +24,62 @@ def import_all():
     init_db()
     conn = get_db()
     c = conn.cursor()
-    if c.execute("SELECT COUNT(*) FROM aduu").fetchone()[0] > 0:
+    if c.execute("SELECT COUNT(*) FROM horse").fetchone()[0] > 0:
         print("⚠️ Өгөгдөл байна. horse.db устгаад дахин ажиллуул."); conn.close(); return
 
     # Сүрэг
-    surg_map = {}
+    herd_map = {}
     for r in read_csv("Potreros.csv"):
-        cur = c.execute("INSERT INTO surg (ner,us_zereg,sergel_zereg,belcheer_zereg,talabai,gazrin_baidal,busad_mal,tailbar,belcheer) VALUES (?,?,?,?,?,?,?,?,?)",
+        cur = c.execute("INSERT INTO herd (name,us_zereg,sergel_zereg,belcheer_zereg,talabai,gazrin_baidal,busad_mal,notes,belcheer) VALUES (?,?,?,?,?,?,?,?,?)",
             (clean(r.get('Nombre')) or 'Нэргүй', clean(r.get('GradoAgua')), clean(r.get('GradoSombra')), clean(r.get('GradoPasto')),
              r.get('Superficie') or None, clean(r.get('Topografia')), clean(r.get('OtrosAnimales')), clean(r.get('Observaciones')), clean(r.get('Pastura'))))
-        surg_map[str(r.get('idPotrero',''))] = cur.lastrowid
-    print(f"✅ Сүрэг: {len(surg_map)}")
+        herd_map[str(r.get('idPotrero',''))] = cur.lastrowid
+    print(f"✅ Сүрэг: {len(herd_map)}")
 
     # Эзэмшигч
-    holboo_map = {}
+    contact_map = {}
     for r in read_csv("Criadores.csv"):
-        ner = clean(r.get('Nombre')) or clean(r.get('RazonSocial'))
-        if not ner: continue
-        cur = c.execute("INSERT INTO holboo (ner,hayag,utas,email,hot,uls) VALUES (?,?,?,?,?,?)",
-            (ner, clean(r.get('Direccion')), clean(r.get('Telefono')), clean(r.get('Email')), clean(r.get('Ciudad')), clean(r.get('Pais'))))
-        holboo_map[str(r.get('idCriador',''))] = cur.lastrowid
-    print(f"✅ Эзэмшигч: {len(holboo_map)}")
+        name = clean(r.get('Nombre')) or clean(r.get('RazonSocial'))
+        if not name: continue
+        cur = c.execute("INSERT INTO contact (name,address,phone,email,city,uls) VALUES (?,?,?,?,?,?)",
+            (name, clean(r.get('Direccion')), clean(r.get('Telefono')), clean(r.get('Email')), clean(r.get('Ciudad')), clean(r.get('Pais'))))
+        contact_map[str(r.get('idCriador',''))] = cur.lastrowid
+    print(f"✅ Эзэмшигч: {len(contact_map)}")
 
     # Адуу
-    def get_cfg(turul, ner):
-        if not ner: return None
-        r = c.execute("SELECT id FROM tohiruulga WHERE turul=? AND ner=?",(turul,ner)).fetchone()
+    def get_cfg(type, name):
+        if not name: return None
+        r = c.execute("SELECT id FROM option WHERE type=? AND name=?",(type,name)).fetchone()
         if r: return r[0]
-        return c.execute("INSERT INTO tohiruulga (turul,ner) VALUES (?,?)",(turul,ner)).lastrowid
+        return c.execute("INSERT INTO option (type,name) VALUES (?,?)",(type,name)).lastrowid
 
-    huis_map = {'Macho':'azarga','Hembra':'guu','Macho Castrado':'morini','Potro':'unaga_er','Potra':'unaga_em'}
+    sex_map = {'Macho':'stallion','Hembra':'mare','Macho Castrado':'gelding','Potro':'colt','Potra':'filly'}
     caballos = read_csv("Caballos.csv")
-    aduu_map = {}
+    horse_map = {}
     for r in caballos:
-        cur = c.execute("INSERT INTO aduu (ner,huis,zus_id,ugshil_id,torson,surg_id,malchin_id,tailbar,senas_tolgoi,senas_bie,orig_id,orig_eceg_id,orig_eh_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (clean(r.get('Nombre')) or 'Нэргүй', huis_map.get(clean(r.get('Macho')),'guu'),
-             get_cfg('zus', clean(r.get('Color'))), get_cfg('ugshil', clean(r.get('Raza'))),
-             clean_date(r.get('FechaNac')), surg_map.get(str(r.get('idPotrero','')).split('.')[0]),
-             holboo_map.get(str(r.get('idCriador','')).split('.')[0]),
+        cur = c.execute("INSERT INTO horse (name,sex,color_id,breed_id,birth_date,herd_id,herder_id,notes,head_marking,body_marking,legacy_id,legacy_sire_id,legacy_dam_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (clean(r.get('Nombre')) or 'Нэргүй', sex_map.get(clean(r.get('Macho')),'mare'),
+             get_cfg('color', clean(r.get('Color'))), get_cfg('breed_text', clean(r.get('Raza'))),
+             clean_date(r.get('FechaNac')), herd_map.get(str(r.get('idPotrero','')).split('.')[0]),
+             contact_map.get(str(r.get('idCriador','')).split('.')[0]),
              clean(r.get('Observaciones')), clean(r.get('ReseñaSVG') or r.get('ResenaSVG')),
              clean(r.get('SeniasParticulares')), r.get('idCaballo'), r.get('idPadre'), r.get('idMadre')))
-        aduu_map[str(r.get('idCaballo',''))] = cur.lastrowid
+        horse_map[str(r.get('idCaballo',''))] = cur.lastrowid
 
     for r in caballos:
-        aid = aduu_map.get(str(r.get('idCaballo','')))
+        aid = horse_map.get(str(r.get('idCaballo','')))
         if not aid: continue
-        eid = aduu_map.get(str(r.get('idPadre','')).split('.')[0])
-        mid = aduu_map.get(str(r.get('idMadre','')).split('.')[0])
-        if eid or mid: c.execute("UPDATE aduu SET eceg_id=?,eh_id=? WHERE id=?",(eid,mid,aid))
+        eid = horse_map.get(str(r.get('idPadre','')).split('.')[0])
+        mid = horse_map.get(str(r.get('idMadre','')).split('.')[0])
+        if eid or mid: c.execute("UPDATE horse SET sire_id=?,dam_id=? WHERE id=?",(eid,mid,aid))
     print(f"✅ Адуу: {len(caballos)}")
 
     # Уралдаан
     cnt = 0
     for r in read_csv("Competencias.csv"):
-        aid = aduu_map.get(str(r.get('idCaballo','')).split('.')[0])
+        aid = horse_map.get(str(r.get('idCaballo','')).split('.')[0])
         if aid:
-            c.execute("INSERT INTO sungaa (aduu_id,ognoo,turul,tailbar,dur) VALUES (?,?,?,?,?)",
+            c.execute("INSERT INTO practice_race (horse_id,date,type,notes,distance_text) VALUES (?,?,?,?,?)",
                 (aid, clean_date(r.get('Fecha')), clean(r.get('Tipo') or r.get('TipoCarrera')), clean(r.get('Observaciones')), clean(r.get('Distancia'))))
             cnt += 1
     print(f"✅ Уралдаан: {cnt}")
@@ -87,15 +87,15 @@ def import_all():
     # Вакцин
     cnt = 0
     for r in read_csv("Vacunas.csv"):
-        aid = aduu_map.get(str(r.get('idCaballo','')).split('.')[0])
+        aid = horse_map.get(str(r.get('idCaballo','')).split('.')[0])
         if aid:
-            c.execute("INSERT INTO vacsin (aduu_id,ognoo,turul) VALUES (?,?,?)",
+            c.execute("INSERT INTO vacsin (horse_id,date,type) VALUES (?,?,?)",
                 (aid, clean_date(r.get('Fecha')), clean(r.get('Vacuna') or r.get('Tipo'))))
             cnt += 1
     print(f"✅ Вакцин: {cnt}")
 
     conn.commit(); conn.close()
-    print(f"\n🎉 Импорт дууслаа! {len(caballos)} адуу, {len(surg_map)} сүрэг")
+    print(f"\n🎉 Импорт дууслаа! {len(caballos)} адуу, {len(herd_map)} сүрэг")
 
 if __name__ == "__main__":
     import_all()

@@ -16,280 +16,303 @@ def init_db():
     conn.executescript("""
     PRAGMA foreign_keys = OFF;
 
-    -- ── ҮНДСЭН ХҮСНЭГТҮҮД ──
-    CREATE TABLE IF NOT EXISTS surg (
+    -- ── CORE TABLES ──
+    CREATE TABLE IF NOT EXISTS herd (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ner TEXT NOT NULL, tailbar TEXT, azarga_id INTEGER, idevhtei INTEGER DEFAULT 1
+        name TEXT NOT NULL, notes TEXT, stallion_id INTEGER, active INTEGER DEFAULT 1
     );
 
-    CREATE TABLE IF NOT EXISTS holboo (
+    CREATE TABLE IF NOT EXISTS contact (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ner TEXT NOT NULL, hayag TEXT, utas TEXT, email TEXT, hot TEXT,
-        turul TEXT DEFAULT 'ezeshigch'
+        name TEXT NOT NULL, address TEXT, phone TEXT, email TEXT, city TEXT,
+        type TEXT DEFAULT 'owner'
     );
 
-    CREATE TABLE IF NOT EXISTS tohiruulga (
+    CREATE TABLE IF NOT EXISTS option (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        turul TEXT NOT NULL, ner TEXT NOT NULL, idevhtei INTEGER DEFAULT 1,
-        UNIQUE(turul, ner)
+        type TEXT NOT NULL, name TEXT NOT NULL, active INTEGER DEFAULT 1,
+        UNIQUE(type, name)
     );
 
-    CREATE TABLE IF NOT EXISTS zuchee (
+    CREATE TABLE IF NOT EXISTS stable (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ner TEXT, turul TEXT, bayrshal TEXT, mur_too INTEGER DEFAULT 1,
-        haircag_too INTEGER DEFAULT 1, idevhtei INTEGER DEFAULT 1
+        name TEXT, type TEXT, location TEXT, row_count INTEGER DEFAULT 1,
+        column_count INTEGER DEFAULT 1, active INTEGER DEFAULT 1
     );
 
-    CREATE TABLE IF NOT EXISTS uyaach (
+    CREATE TABLE IF NOT EXISTS trainer (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ner TEXT NOT NULL, utas TEXT, hayg TEXT,
-        tsol TEXT DEFAULT 'tsolgui', tailbar TEXT, idevhtei INTEGER DEFAULT 1
+        name TEXT NOT NULL, phone TEXT, address TEXT,
+        title TEXT DEFAULT 'none', notes TEXT, active INTEGER DEFAULT 1
     );
 
     CREATE TABLE IF NOT EXISTS naadam (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ner TEXT, turul TEXT, dund_turul TEXT, ognoo TEXT, hayg TEXT, tailbar TEXT
+        name TEXT, type TEXT, subtype TEXT, date TEXT, location TEXT, notes TEXT
     );
 
-    -- ── АДУУ ──
-    CREATE TABLE IF NOT EXISTS aduu (
+    -- ── HORSE ──
+    CREATE TABLE IF NOT EXISTS horse (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ner TEXT NOT NULL,
-        aduu_id TEXT, dugaar TEXT,
-        huis TEXT,
-        ugshil_id INTEGER, garal_id INTEGER,
-        surg_id INTEGER, zus_id INTEGER,
-        status TEXT DEFAULT 'idevhtei',
-        torson TEXT, ognoo_gui INTEGER DEFAULT 0,
-        chip TEXT, pasport TEXT, dnh TEXT,
-        registerlesen INTEGER DEFAULT 1, id_gui INTEGER DEFAULT 0,
-        tsusni_huvi TEXT,
-        senas_tolgoi TEXT, senas_bie TEXT, senas_hel TEXT, tamga TEXT,
-        zuchee_id INTEGER, bayrshal TEXT, malchin_id INTEGER,
-        tailbar TEXT, huviin_temdeglel TEXT,
-        hongoloson INTEGER DEFAULT 0,
-        eceg_id INTEGER, eh_id INTEGER,
-        orig_id TEXT, orig_eceg_id TEXT, orig_eh_id TEXT,
-        chuhal INTEGER DEFAULT 0,
-        idevhtei INTEGER DEFAULT 1,
-        FOREIGN KEY (surg_id) REFERENCES surg(id)
+        name TEXT NOT NULL,
+        registration_code TEXT, number TEXT,
+        sex TEXT,
+        breed_id INTEGER, origin_id INTEGER,
+        herd_id INTEGER, color_id INTEGER,
+        status TEXT DEFAULT 'active',
+        birth_date TEXT, birth_date_unknown INTEGER DEFAULT 0,
+        chip TEXT, passport TEXT, dna TEXT,
+        registered INTEGER DEFAULT 1, no_id INTEGER DEFAULT 0,
+        blood_percentage TEXT,
+        head_marking TEXT, body_marking TEXT, leg_marking TEXT, brand TEXT,
+        stable_id INTEGER, location TEXT, herder_id INTEGER,
+        notes TEXT, personal_note TEXT,
+        gelded INTEGER DEFAULT 0,
+        sire_id INTEGER, dam_id INTEGER,
+        legacy_id TEXT, legacy_sire_id TEXT, legacy_dam_id TEXT,
+        important INTEGER DEFAULT 0,
+        active INTEGER DEFAULT 1,
+        FOREIGN KEY (herd_id) REFERENCES herd(id)
     );
 
-    CREATE TABLE IF NOT EXISTS aduu_ezeshigch (
+    CREATE TABLE IF NOT EXISTS horse_owner (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER, ezeshigch_id INTEGER, huvi INTEGER DEFAULT 100
+        horse_id INTEGER, owner_id INTEGER, share_percent INTEGER DEFAULT 100
     );
 
-    CREATE TABLE IF NOT EXISTS aduu_uyaach (
+    CREATE TABLE IF NOT EXISTS horse_trainer (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER, uyaach_id INTEGER,
-        ehleh_ognoo TEXT, duusah_ognoo TEXT, tailbar TEXT,
-        idevhtei INTEGER DEFAULT 1
+        horse_id INTEGER, trainer_id INTEGER,
+        start_date TEXT, end_date TEXT, notes TEXT,
+        active INTEGER DEFAULT 1
     );
 
-    -- ── СҮНГАА ──
-    CREATE TABLE IF NOT EXISTS sungaa (
+    -- ── PRACTICE RACE (sungaa: training scrimmage / mock race) ──
+    CREATE TABLE IF NOT EXISTS practice_race (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER, ognoo TEXT, turul TEXT, tailbar TEXT,
-        dur TEXT, naadam_id INTEGER, uyaach_id INTEGER,
-        unach TEXT, nas_angilal TEXT, bair INTEGER
+        horse_id INTEGER, date TEXT, type TEXT, notes TEXT,
+        distance_text TEXT, naadam_id INTEGER, trainer_id INTEGER,
+        jockey TEXT, age_category TEXT, rank INTEGER,
+        naadam_type TEXT, naadam_name TEXT,
+        province TEXT, district TEXT,
+        owner_text TEXT, breed_text TEXT,
+        distance_km REAL, time TEXT, venue TEXT
     );
 
-    -- ── УРАЛДААН (хуучин системээс) ──
-    CREATE TABLE IF NOT EXISTS uraldaan (
+    -- ── RACE (legacy old-system race records) ──
+    CREATE TABLE IF NOT EXISTS race (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER NOT NULL,
-        ognoo TEXT, naadam_ner TEXT, bair TEXT,
-        unach TEXT, tailbar TEXT, orig_id TEXT
+        horse_id INTEGER NOT NULL,
+        date TEXT, naadam_name TEXT, rank TEXT,
+        jockey TEXT, notes TEXT, legacy_id TEXT
     );
 
-    -- ── ЗУРАГ ──
-    CREATE TABLE IF NOT EXISTS zurag (
+    -- ── PHOTO ──
+    CREATE TABLE IF NOT EXISTS photo (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER, fayl TEXT, ognoo TEXT, tailbar TEXT, ner TEXT
+        horse_id INTEGER, file TEXT, date TEXT, notes TEXT, name TEXT
     );
 
-    -- ── ЭРҮҮЛ МЭНД ──
-    CREATE TABLE IF NOT EXISTS eruul_mend (
+    -- ── HEALTH RECORD ──
+    CREATE TABLE IF NOT EXISTS health_record (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER NOT NULL,
-        ognoo TEXT,
-        turul TEXT,        -- Тарилга / Эмчилгээ / Шимэгч устгал / Шүдний эмчилгээ / Бусад
-        buten TEXT,        -- Бүтээгдэхүүн / Вакцин
-        hemjee TEXT,       -- Тоо хэмжээ
-        emch TEXT,
-        tailbar TEXT,
-        orig_id TEXT
+        horse_id INTEGER NOT NULL,
+        date TEXT,
+        type TEXT,        -- Тарилга / Эмчилгээ / Шимэгч устгал / Шүдний эмчилгээ / Бусад
+        product TEXT,     -- Бүтээгдэхүүн / Вакцин
+        amount TEXT,      -- Тоо хэмжээ
+        vet TEXT,
+        notes TEXT,
+        legacy_id TEXT
     );
 
-    -- ── ХЭМЖИЛТ ──
-    CREATE TABLE IF NOT EXISTS hemjilt (
+    -- ── MEASUREMENT ──
+    CREATE TABLE IF NOT EXISTS measurement (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER NOT NULL,
-        ognoo TEXT,
-        jin REAL,           -- КГ
-        undur REAL,         -- СМ
-        tseezhiin_yas REAL, -- СМ
-        urd_hol REAL,       -- СМ
-        tailbar TEXT
+        horse_id INTEGER NOT NULL,
+        date TEXT,
+        weight REAL,        -- kg
+        height REAL,        -- cm
+        chest_girth REAL,   -- cm
+        cannon_bone REAL,   -- cm
+        notes TEXT
     );
 
-    -- ── ТАХ ──
-    CREATE TABLE IF NOT EXISTS tah (
+    -- ── HOOF CARE ──
+    CREATE TABLE IF NOT EXISTS hoof_care (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER NOT NULL,
-        ognoo TEXT,
-        daragiih_ognoo TEXT,
-        turul TEXT,         -- Урд / Хойд / Тусгай
-        tailbar TEXT,
-        tahchin TEXT,
-        orig_id TEXT
+        horse_id INTEGER NOT NULL,
+        date TEXT,
+        next_date TEXT,
+        type TEXT,          -- Урд / Хойд / Тусгай
+        notes TEXT,
+        farrier TEXT,
+        legacy_id TEXT
     );
 
-    -- ── ТЭЖЭЭЛ ──
-    CREATE TABLE IF NOT EXISTS tejeel (
+    -- ── FEEDING ──
+    CREATE TABLE IF NOT EXISTS feeding (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER NOT NULL,
-        tejeel_ner TEXT,
-        ehleh_ognoo TEXT,
-        duusah_ognoo TEXT,
-        tailbar TEXT
+        horse_id INTEGER NOT NULL,
+        feed_name TEXT,
+        start_date TEXT,
+        end_date TEXT,
+        notes TEXT
     );
 
-    -- ── АИЭ ШИНЖИЛГЭЭ (Цус багадалт) ──
-    CREATE TABLE IF NOT EXISTS aie_shinjilgee (
+    -- ── EIA TEST (Equine Infectious Anemia) ──
+    CREATE TABLE IF NOT EXISTS eia_test (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER NOT NULL,
-        ognoo TEXT,
-        ur_dun TEXT,        -- Сөрөг / Эерэг
-        aimag TEXT,
-        laboratort TEXT,
-        hariutsan TEXT,
-        tailbar TEXT,
-        orig_id TEXT
+        horse_id INTEGER NOT NULL,
+        date TEXT,
+        result TEXT,        -- Сөрөг / Эерэг
+        province TEXT,
+        lab TEXT,
+        responsible TEXT,
+        notes TEXT,
+        legacy_id TEXT
     );
 
-    -- ── ХАВСРАЛ ФАЙЛ ──
-    CREATE TABLE IF NOT EXISTS havsral (
+    -- ── ATTACHMENT ──
+    CREATE TABLE IF NOT EXISTS attachment (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER NOT NULL,
-        fayl TEXT, ner TEXT, ognoo TEXT, tailbar TEXT
+        horse_id INTEGER NOT NULL,
+        file TEXT, name TEXT, date TEXT, notes TEXT
     );
 
-    -- ── НӨХӨН ҮРЖИХҮЙ ──
-    CREATE TABLE IF NOT EXISTS mori_soikh (
+    -- ── TRAINING SESSION ──
+    CREATE TABLE IF NOT EXISTS training_session (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER NOT NULL,
-        uyaach_id INTEGER,
-        turul TEXT NOT NULL,
-        ognoo TEXT,
-        zai_km REAL,
-        hugatsaa_min REAL,
-        temp_c REAL,
-        salhi_ms REAL,
-        unach TEXT,
-        honog INTEGER,
-        tailbar TEXT,
-        anhliin_tekst TEXT
+        horse_id INTEGER NOT NULL,
+        trainer_id INTEGER,
+        type TEXT NOT NULL,
+        date TEXT,
+        distance_km REAL,
+        duration_min REAL,
+        temperature_c REAL,
+        wind_ms REAL,
+        jockey TEXT,
+        days INTEGER,
+        notes TEXT,
+        original_text TEXT
     );
 
-    -- ── POLAR HRM ӨГӨГДӨЛ ──
-    CREATE TABLE IF NOT EXISTS polar_soikh (
+    -- ── POLAR HRM SESSION ──
+    CREATE TABLE IF NOT EXISTS polar_session (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        mori_soikh_id INTEGER,          -- mori_soikh-тай холбоос
-        aduu_id INTEGER NOT NULL,
-        uyaach_id INTEGER,
-        ognoo TEXT,
-        turul TEXT,                     -- Бага/Дунд/Их сүнгаа г.м.
-        -- Үндсэн хэмжилтүүд
-        zai_km REAL,
-        hugatsaa_min REAL,
-        hurd_dundaj REAL,               -- км/цаг
-        -- Зүрхний цохилт
-        zc_dundaj REAL,                 -- цох/мин
-        zc_max REAL,
-        zc_min REAL,
-        -- Сэргэлт
-        sergelt_1min REAL,              -- 1 минутын дараах ЗЦ
-        sergelt_2min REAL,              -- 2 минутын дараах ЗЦ
-        sergelt_indeks TEXT,            -- Маш сайн/Сайн/Дунд/Муу
-        -- HRV
-        hrv REAL,                       -- ms
-        -- ЗЦ бүсийн хуваарилалт (%)
-        zc_bus_amar REAL,               -- <100 цох/мин
-        zc_bus_dund REAL,               -- 100-130
-        zc_bus_huchten REAL,            -- 130-160
-        zc_bus_ih_huch REAL,            -- 160-180
-        zc_bus_deed REAL,               -- >180
-        -- Training load
+        training_session_id INTEGER,
+        horse_id INTEGER NOT NULL,
+        trainer_id INTEGER,
+        date TEXT,
+        type TEXT,
+        distance_km REAL,
+        duration_min REAL,
+        avg_speed REAL,                 -- km/h
+        avg_heart_rate REAL,            -- bpm
+        max_heart_rate REAL,
+        min_heart_rate REAL,
+        recovery_1min REAL,
+        recovery_2min REAL,
+        recovery_index TEXT,
+        hrv REAL,
+        hr_zone_resting REAL,           -- <100 bpm
+        hr_zone_moderate REAL,          -- 100-130
+        hr_zone_intense REAL,           -- 130-160
+        hr_zone_very_intense REAL,      -- 160-180
+        hr_zone_max REAL,               -- >180
         training_load REAL,
-        -- Дэлгэрэнгүй цуврал өгөгдөл (JSON)
-        zc_series TEXT,                 -- секунд бүрийн ЗЦ
-        gps_series TEXT,                -- GPS маршрут
-        -- Эх сурвалж
-        polar_exercise_id TEXT,         -- Polar-ийн exercise ID
-        import_ognoo TEXT DEFAULT CURRENT_TIMESTAMP,
-        tailbar TEXT
+        hr_series TEXT,                 -- per-second HR (JSON)
+        gps_series TEXT,                -- GPS route (JSON)
+        polar_exercise_id TEXT,
+        imported_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        notes TEXT
     );
 
-    CREATE TABLE IF NOT EXISTS nokhon_urjikh (
+    -- ── BREEDING EVENT ──
+    CREATE TABLE IF NOT EXISTS breeding_event (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER NOT NULL,
-        ognoo TEXT, turul TEXT, tailbar TEXT, emch TEXT
+        horse_id INTEGER NOT NULL,
+        date TEXT, type TEXT, notes TEXT, vet TEXT
     );
 
-    -- ── БУСАД ──
+    -- ── GELDING EVENT ──
+    CREATE TABLE IF NOT EXISTS gelding_event (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        horse_id INTEGER NOT NULL,
+        date DATE NOT NULL,
+        performed_by TEXT,
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (horse_id) REFERENCES horse(id)
+    );
+
+    -- ── NOTIFICATION ──
     CREATE TABLE IF NOT EXISTS notification (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uyaach_id INTEGER, aduu_id INTEGER, temdeglel_id INTEGER,
-        tekst TEXT, unshlaa INTEGER DEFAULT 0,
-        ognoo TEXT DEFAULT CURRENT_TIMESTAMP
+        trainer_id INTEGER, horse_id INTEGER, note_id INTEGER,
+        text TEXT, read INTEGER DEFAULT 0,
+        date TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS uyaan_temdeglel (
+    -- ── TRAINING NOTE ──
+    CREATE TABLE IF NOT EXISTS training_note (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        aduu_id INTEGER, uyaach_id INTEGER, ognoo TEXT,
-        turul TEXT, zai_km REAL, hugatsaa_min REAL,
-        tailbar TEXT, anhliin_tekst TEXT
+        horse_id INTEGER, trainer_id INTEGER, date TEXT,
+        type TEXT, distance_km REAL, duration_min REAL,
+        notes TEXT, original_text TEXT
     );
 
-    CREATE TABLE IF NOT EXISTS ajil (
+    -- ── TASK ──
+    CREATE TABLE IF NOT EXISTS task (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ner TEXT, tailbar TEXT, ognoo TEXT, tsag TEXT,
-        davtalt TEXT DEFAULT 'ganc', erembe TEXT DEFAULT 'dundaj',
-        status TEXT DEFAULT 'todorhoi', huvaarlisan_id INTEGER
+        name TEXT, notes TEXT, date TEXT, time TEXT,
+        repeat TEXT DEFAULT 'once', priority TEXT DEFAULT 'medium',
+        status TEXT DEFAULT 'pending', assigned_to_id INTEGER
     );
 
-    CREATE TABLE IF NOT EXISTS sankhuu (
+    -- ── FINANCE RECORD ──
+    CREATE TABLE IF NOT EXISTS finance_record (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        turul TEXT, ognoo TEXT, dun REAL,
-        angilal TEXT, tailbar TEXT, aduu_id INTEGER
+        type TEXT, date TEXT, amount REAL,
+        category TEXT, notes TEXT, horse_id INTEGER
+    );
+
+    -- ── TRAINING PLAN ──
+    CREATE TABLE IF NOT EXISTS training_plan (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        horse_id INTEGER NOT NULL,
+        trainer_id INTEGER,
+        date TEXT NOT NULL,
+        type TEXT NOT NULL,
+        status TEXT DEFAULT 'planned',
+        notes TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
     );
     """)
 
-    # Үндсэн тохиргоонууд
+    # Default option (lookup) values — Cyrillic Mongolian display strings.
     defaults = [
-        ('zus','Хар'),('zus','Цагаан'),('zus','Улаан хүрэн'),('zus','Боро'),
-        ('zus','Алаг'),('zus','Хүрэн'),('zus','Зээрд'),('zus','Шарга'),
-        ('zus','Халиун'),('zus','Саарал'),('zus','Хээр'),('zus','Буурал'),
-        ('zus','Бор'),('zus','Хонгор'),('zus','Хүрэн халзан'),
-        ('zus','Хар буурал'),('zus','Хээр буурал'),('zus','Халиун халзан'),
-        ('ugshil','Монгол адуу'),('ugshil','Хүнхэр адуу'),
-        ('ugshil','Англи адуу'),('ugshil','Будан адуу'),
-        ('garal','Дотоодын'),('garal','Гадаадын'),
-        ('senas_bie','Зүүн хошуу'),('senas_bie','Баруун хошуу'),
-        ('senas_bie','Хоёр хошуу'),('senas_bie','Шарагтай'),
-        ('senas_tolgoi','Халзан'),('senas_tolgoi','Цагаан халзан'),
-        ('senas_hel','Цагаан хөл'),('senas_hel','Дөрвөн цагаан'),
-        # Морь сойхын ажлын төрөл
-        ('soikh_turul','Амраах'),('soikh_turul','Гэдэс солих'),
-        ('soikh_turul','Гишгүүлэх'),('soikh_turul','Хөлс авах'),
-        ('soikh_turul','Тар'),('soikh_turul','Хангар'),
-        ('soikh_turul','Бага сүнгаа'),('soikh_turul','Дунд сүнгаа'),
-        ('soikh_turul','Их сүнгаа'),
+        ('color','Хар'),('color','Цагаан'),('color','Улаан хүрэн'),('color','Боро'),
+        ('color','Алаг'),('color','Хүрэн'),('color','Зээрд'),('color','Шарга'),
+        ('color','Халиун'),('color','Саарал'),('color','Хээр'),('color','Буурал'),
+        ('color','Бор'),('color','Хонгор'),('color','Хүрэн халзан'),
+        ('color','Хар буурал'),('color','Хээр буурал'),('color','Халиун халзан'),
+        ('breed','Монгол адуу'),('breed','Хүнхэр адуу'),
+        ('breed','Англи адуу'),('breed','Будан адуу'),
+        ('origin','Дотоодын'),('origin','Гадаадын'),
+        ('body_marking','Зүүн хошуу'),('body_marking','Баруун хошуу'),
+        ('body_marking','Хоёр хошуу'),('body_marking','Шарагтай'),
+        ('head_marking','Халзан'),('head_marking','Цагаан халзан'),
+        ('leg_marking','Цагаан хөл'),('leg_marking','Дөрвөн цагаан'),
+        # Training session types
+        ('training_type','Амраах'),('training_type','Гэдэс солих'),
+        ('training_type','Гишгүүлэх'),('training_type','Хөлс авах'),
+        ('training_type','Тар'),('training_type','Хангар'),
+        ('training_type','Бага сүнгаа'),('training_type','Дунд сүнгаа'),
+        ('training_type','Их сүнгаа'),
     ]
     for t, n in defaults:
-        conn.execute("INSERT OR IGNORE INTO tohiruulga (turul,ner) VALUES (?,?)", (t, n))
+        conn.execute("INSERT OR IGNORE INTO option (type,name) VALUES (?,?)", (t, n))
 
     conn.commit()
     conn.close()
