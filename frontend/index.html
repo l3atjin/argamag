@@ -721,14 +721,14 @@ function showPage(name) {
 async function loadStats() {
   const s = await api('/api/stats');
   document.getElementById('ss-total').textContent = s.total;
-  document.getElementById('ss-azarga').textContent = s.azarga;
-  document.getElementById('ss-guu').textContent = s.guu;
+  document.getElementById('ss-azarga').textContent = s.stallion;
+  document.getElementById('ss-guu').textContent = s.mare;
   document.getElementById('nb-horse').textContent = s.total;
   document.getElementById('nb-herd').textContent = s.herd;
   const nbHolboo = document.getElementById('nb-contact');
   if (nbHolboo) nbHolboo.textContent = s.contact;
-  document.getElementById('nb-task').textContent = s.task_todorhoigui||'—';
-  const taskData = await api('/api/tasks?status=todorhoi&limit=5');
+  document.getElementById('nb-task').textContent = s.task_pending||'—';
+  const taskData = await api('/api/tasks?status=pending&limit=5');
   const el = document.getElementById('sanuulga-list');
   if (!taskData.length) { el.innerHTML = '<div style="color:#666;font-size:10px;text-align:center">Ажил байхгүй</div>'; return; }
   el.innerHTML = taskData.map(a => '<div class="sanuulga-item"><div class="sanuulga-name">'+a.name+'</div><div class="sanuulga-date">'+(a.date||'—')+'</div><span class="sanuulga-priority er-'+a.priority+'">'+(a.priority==='ondor'?'Өндөр':a.priority==='dundaj'?'Дундаж':'Нам')+'</span></div>').join('');
@@ -1005,15 +1005,15 @@ async function renderAduu(reset=false) {
             '<button id="sex-all" class="filter-btn active" onclick="setSrch(\'sex\',\'\')">Бүгд</button>' +
             '<button id="sex-er" class="filter-btn" onclick="setSrch(\'sex\',\'er\')">Эр</button>' +
             '<button id="sex-ohin" class="filter-btn" onclick="setSrch(\'sex\',\'ohin\')">Охин</button>' +
-            '<button id="sex-morini" class="filter-btn" onclick="setSrch(\'sex\',\'morini\')">🔪 Морь</button>' +
+            '<button id="sex-morini" class="filter-btn" onclick="setSrch(\'sex\',\'gelding\')">🔪 Морь</button>' +
           '</div>' +
           '<div style="display:flex;align-items:center;gap:4px">' +
             '<span style="font-size:11px;color:var(--text-s);font-weight:600">Статус:</span>' +
             '<button id="st-all" class="filter-btn active" onclick="setSrch(\'status\',\'\')">Бүгд</button>' +
             '<button id="st-idev" class="filter-btn" onclick="setSrch(\'status\',\'active\')">Идэвхтэй</button>' +
-            '<button id="st-idvh" class="filter-btn" onclick="setSrch(\'status\',\'idvhigui\')">Идэвхгүй</button>' +
-            '<button id="st-heel" class="filter-btn" onclick="setSrch(\'status\',\'heel_hayas\')">Хээл хаясан</button>' +
-            '<button id="st-suvr" class="filter-btn" onclick="setSrch(\'status\',\'suvairsan\')">Сувайрсан</button>' +
+            '<button id="st-idvh" class="filter-btn" onclick="setSrch(\'status\',\'inactive\')">Идэвхгүй</button>' +
+            '<button id="st-heel" class="filter-btn" onclick="setSrch(\'status\',\'foaling\')">Хээл хаясан</button>' +
+            '<button id="st-suvr" class="filter-btn" onclick="setSrch(\'status\',\'bred\')">Сувайрсан</button>' +
           '</div>' +
           '<div class="search-actions">' +
             '<button class="btn btn-primary btn-sm" onclick="currentPage=0;fetchAduuTable()">🔍 Хайх</button>' +
@@ -2354,7 +2354,7 @@ async function dbLoadUnagalalt() {
   set('db-u-unagalsan', u.unagalsan_guu);
   set('db-u-total', u.total_unaga);
   set('db-u-suvairsan', u.suvairsan_guu);
-  set('db-u-heel', u.heel_hayas);
+  set('db-u-heel', u.foaling);
   set('db-u-4plus', u.guu_4plus+'-аас');
   set('db-u-pct-txt', u.unagalalt_pct+'%');
   const bar = document.getElementById('db-u-bar');
@@ -2459,16 +2459,16 @@ async function renderDashboard() {
         <div style="font-size:9px;color:#185FA5;font-weight:700;letter-spacing:0.05em;margin-bottom:4px;text-transform:uppercase">Нийт адуу</div>
         <div style="font-size:22px;font-weight:800;color:#0C447C;line-height:1">${d.total}</div>
         <div style="margin-top:6px;padding-top:6px;border-top:1px solid #C5DCEF;display:flex;gap:6px">
-          <span style="font-size:10px;background:#C5DCEF;color:#185FA5;border-radius:4px;padding:1px 6px;font-weight:600">${d.azarga} Эр</span>
-          <span style="font-size:10px;background:#F5C5D3;color:#A32D2D;border-radius:4px;padding:1px 6px;font-weight:600">${d.guu} Охин</span>
+          <span style="font-size:10px;background:#C5DCEF;color:#185FA5;border-radius:4px;padding:1px 6px;font-weight:600">${d.stallion} Эр</span>
+          <span style="font-size:10px;background:#F5C5D3;color:#A32D2D;border-radius:4px;padding:1px 6px;font-weight:600">${d.mare} Охин</span>
         </div>
       </div>
       <div style="background:#EAF3DE;border-radius:10px;padding:10px 12px;border:0.5px solid #B8D9A0">
         <div style="font-size:9px;color:#3B6D11;font-weight:700;letter-spacing:0.05em;margin-bottom:4px;text-transform:uppercase">Нийт гүү</div>
-        <div style="font-size:22px;font-weight:800;color:#27500A;line-height:1">${d.guu}</div>
+        <div style="font-size:22px;font-weight:800;color:#27500A;line-height:1">${d.mare}</div>
         <div style="margin-top:6px;padding-top:6px;border-top:1px solid #B8D9A0">
           <div style="font-size:10px;color:#3B6D11">Унаглах гүү: <strong>${d.guu_4plus}</strong></div>
-          <div style="margin-top:3px;height:3px;background:#B8D9A0;border-radius:2px"><div style="width:${d.guu>0?Math.round(d.guu_4plus/d.guu*100):0}%;height:100%;background:#3B6D11;border-radius:2px"></div></div>
+          <div style="margin-top:3px;height:3px;background:#B8D9A0;border-radius:2px"><div style="width:${d.mare>0?Math.round(d.guu_4plus/d.mare*100):0}%;height:100%;background:#3B6D11;border-radius:2px"></div></div>
         </div>
       </div>
       <div style="background:#FAEEDA;border-radius:10px;padding:10px 12px;border:0.5px solid #E8C88A">
@@ -2594,8 +2594,8 @@ async function renderDashboard() {
           <div style="background:#FCEBEB;border-radius:7px;padding:6px 8px">
             <div style="font-size:10px;color:#A32D2D;font-weight:600;margin-bottom:2px">Хээл хаясан</div>
             <div style="display:flex;align-items:baseline;gap:6px">
-              <div style="font-size:15px;font-weight:700;color:#791F1F" id="db-u-heel">${d.heel_hayas}</div>
-              <div style="font-size:11px;font-weight:600;color:#A32D2D">${d.guu_4plus>0?Math.round(d.heel_hayas/d.guu_4plus*100):0}%</div>
+              <div style="font-size:15px;font-weight:700;color:#791F1F" id="db-u-heel">${d.foaling}</div>
+              <div style="font-size:11px;font-weight:600;color:#A32D2D">${d.guu_4plus>0?Math.round(d.foaling/d.guu_4plus*100):0}%</div>
             </div>
             <div style="font-size:10px;color:#A32D2D;margin-top:4px;padding-top:4px;border-top:1px solid #F5C5C5">Хээл хаясан</div>
           </div>
@@ -2896,7 +2896,7 @@ async function dbLoadButets() {
     const ex = Chart.getChart(zusCtx); if (ex) ex.destroy();
     const isDark = matchMedia('(prefers-color-scheme:dark)').matches;
     // Top 5 + Бусад collapse — Зүс
-    const zusAll = [...bd.zus].sort((a,b)=>b.count-a.count);
+    const zusAll = [...(bd.color||[])].sort((a,b)=>b.count-a.count);
     const zusRest = zusAll.slice(5);
     const busdToo = zusRest.reduce((s,z)=>s+z.count,0);
     const zusData = busdToo > 0 ? [...zusAll.slice(0,5), {name:'Бусад', count:busdToo}] : zusAll.slice(0,5);
@@ -3104,7 +3104,7 @@ async function dbLoadSoiltStat() {
 
 // ── НААДМЫН ЧИГ ХАНДЛАГА chart ──
 async function drawNaadamTrendChart() {
-  const data = await api('/api/dashboard/naadam_statss');
+  const data = await api('/api/dashboard/naadam_stats');
   const ctx = document.getElementById('db-naadam-trend-chart');
   if (!ctx || !data || !data.length) return;
   const ex = Chart.getChart(ctx); if (ex) ex.destroy();
@@ -3150,8 +3150,8 @@ async function drawUrjilChart() {
       labels: data.map(r => r.on),
       datasets: [
         {label:'Унагалсан',   data: data.map(r=>r.unagalsan),  backgroundColor:'#1D9E75', borderRadius:3, stack:'a'},
-        {label:'Хээл хаясан', data: data.map(r=>r.heel_hayas), backgroundColor:'#E24B4A', borderRadius:3, stack:'a'},
-        {label:'Сувайрсан',   data: data.map(r=>r.suvairsan),  backgroundColor:'#D0CABC', borderRadius:3, stack:'a'},
+        {label:'Хээл хаясан', data: data.map(r=>r.foaling), backgroundColor:'#E24B4A', borderRadius:3, stack:'a'},
+        {label:'Сувайрсан',   data: data.map(r=>r.bred),  backgroundColor:'#D0CABC', borderRadius:3, stack:'a'},
       ]
     },
     options: {
@@ -3188,10 +3188,10 @@ async function drawUrjilChart() {
         <span style="color:#1A6E3C">Унагалсан</span><strong style="color:#0F4A28">${last.unagalsan}</strong>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 6px;background:#FEE8E8;border-radius:5px">
-        <span style="color:#A32D2D">Хээл хаясан</span><strong style="color:#791F1F">${last.heel_hayas}</strong>
+        <span style="color:#A32D2D">Хээл хаясан</span><strong style="color:#791F1F">${last.foaling}</strong>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 6px;background:var(--gray-ll);border-radius:5px">
-        <span style="color:var(--text-s)">Сувайрсан</span><strong>${last.suvairsan}</strong>
+        <span style="color:var(--text-s)">Сувайрсан</span><strong>${last.bred}</strong>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 6px">
         <span style="color:var(--text-s)">Унаглах гүү</span><strong>${last.guu_4plus}</strong>

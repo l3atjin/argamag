@@ -1881,7 +1881,7 @@ def dashboard_age(herd_id: Optional[int]=None, owner_id: Optional[int]=None, on:
     conn.close()
     return age_data
 
-@app.get("/api/dashboard/naadam_statss")
+@app.get("/api/dashboard/naadam_stats")
 def dashboard_naadam_stat():
     """Наадмын амжилт — жилээр, насны ангиллаар (сүүлийн 5 жил)"""
     import datetime
