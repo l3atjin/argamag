@@ -16,8 +16,21 @@ from auth import (
 )
 
 app = FastAPI()
-# CORS: open in dev. Lock to the production domain when deploying.
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], allow_credentials=True)
+
+# CORS: locked down via CORS_ORIGINS env var (comma-separated list of full
+# origins, e.g. "https://argamag.fly.dev,https://argamag.com"). Default
+# allows common localhost origins so dev works out of the box.
+# NOTE: allow_origins=["*"] is incompatible with allow_credentials=True
+# in modern browsers, so we always pass an explicit list.
+_default_origins = "http://localhost:8000,http://127.0.0.1:8000,http://localhost:8765,http://127.0.0.1:8765"
+_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", _default_origins).split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    allow_credentials=True,
+)
 
 
 # ── Auth middleware ──
@@ -41,7 +54,13 @@ app.add_middleware(AuthMiddleware)
 FRONTEND = os.path.join(os.path.dirname(__file__), "../frontend")
 if os.path.exists(FRONTEND):
     app.mount("/static", StaticFiles(directory=FRONTEND), name="static")
-UPLOADS = os.path.join(os.path.dirname(__file__), "../frontend/uploads")
+
+# UPLOADS_DIR overridable via env var (Fly.io: /data/uploads on the volume).
+# Default to the repo's frontend/uploads for local development.
+UPLOADS = os.environ.get(
+    "UPLOADS_DIR",
+    os.path.join(os.path.dirname(__file__), "../frontend/uploads"),
+)
 os.makedirs(UPLOADS, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOADS), name="uploads")
 
@@ -1176,11 +1195,6 @@ def naadam_delete(id: int):
     conn = get_db()
     conn.execute("DELETE FROM naadam WHERE id=?", (id,))
     conn.commit(); return {"ok": True}
-
-# ── UPLOADS ──
-UPLOADS = os.path.join(os.path.dirname(__file__), "../frontend/uploads")
-os.makedirs(UPLOADS, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=UPLOADS), name="uploads")
 
 # ── УРАЛДААН ──
 class RaceIn(BaseModel):

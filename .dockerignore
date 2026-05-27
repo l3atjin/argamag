@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# Local data (will live on the Fly volume instead)
+data
+*.db
+*.db-journal
+*.bak
+*.bak2
+
+# Local uploads (will live on the Fly volume)
+frontend/uploads
+
+# Legacy migration source
+noots
+noots2
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+env
+
+# OS / editors
+.DS_Store
+.vscode
+.idea
+*.swp
+
+# Docs and CI
+DEPLOY.md
+.github
+.fly

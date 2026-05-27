@@ -1,0 +1,43 @@
+# Fly.io app config — see https://fly.io/docs/reference/configuration/
+#
+# Quick reference:
+#   fly deploy                  -- rebuild and deploy
+#   fly logs                    -- tail logs
+#   fly ssh console             -- ssh into a running machine
+#   fly status                  -- machines, regions, health
+#   fly secrets set FOO=bar     -- set secret env var (triggers redeploy)
+#   fly secrets list            -- list secret names
+
+app = "argamag"
+primary_region = "nrt"            # Tokyo — closest Fly region to Mongolia
+
+[build]
+  # Uses the project root Dockerfile
+
+[env]
+  # Non-secret env vars. SECRET_KEY and any future secrets go via `fly secrets set`.
+  DB_PATH = "/data/horse.db"
+  UPLOADS_DIR = "/data/uploads"
+  # Lock CORS to the Fly URL by default. Update if you add a custom domain.
+  CORS_ORIGINS = "https://argamag.fly.dev"
+
+[[mounts]]
+  source = "argamag_data"          # volume name (created via `fly volumes create`)
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true               # Fly serves HTTPS at the edge
+  auto_stop_machines = "stop"      # Sleep after idle — saves money
+  auto_start_machines = true       # Wake on incoming request
+  min_machines_running = 0         # OK to be fully stopped when idle
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 200
+    soft_limit = 150
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"                 # SQLite + FastAPI fits comfortably; bump to 512mb if needed

@@ -1,5 +1,11 @@
 import sqlite3, os
-DB_PATH = os.path.join(os.path.dirname(__file__), "../data/horse.db")
+
+# DB_PATH overridable via env var (Fly.io mounts the volume at /data).
+# Default points at the repo's data/ dir for local development.
+DB_PATH = os.environ.get(
+    "DB_PATH",
+    os.path.join(os.path.dirname(__file__), "../data/horse.db"),
+)
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
