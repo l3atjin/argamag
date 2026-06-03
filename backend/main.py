@@ -179,7 +179,7 @@ def horse_list(
     export: int=0
 ):
     conn = get_db()
-    sql = """SELECT a.id,a.name,a.sex,a.birth_date,a.status,a.registration_code,a.number,
+    sql = """SELECT a.id,a.name,a.sex,a.birth_date,a.status,a.registration_code,a.registration_code AS horse_id,a.number,
         a.chip,a.important,a.herd_id, s.name as herd_name, tz.name as color_name, tu.name as breed_name,
         hm.name as herder_name, h.name as owner_name,
         e.name as sire_name, m.name as dam_name
@@ -300,7 +300,7 @@ def horse_pedigree(id: int, ue: int=3):
     conn = get_db()
     def get_node(aid, depth):
         if not aid or depth > ue: return None
-        r = conn.execute("SELECT id,name,sex,birth_date,horse_id,number,sire_id,dam_id FROM horse WHERE id=?", (aid,)).fetchone()
+        r = conn.execute("SELECT id,name,sex,birth_date,registration_code AS horse_id,number,sire_id,dam_id FROM horse WHERE id=?", (aid,)).fetchone()
         if not r: return None
         node = dict(r)
         if depth < ue:
@@ -358,7 +358,7 @@ def gelding_eligible(owner_id: Optional[int]=None, age_min: int=3, age_max: Opti
 @app.get("/api/horses/{id}")
 def horse_detail(id: int):
     conn = get_db()
-    r = conn.execute("""SELECT a.*,s.name as herd_name,tz.name as color_name,tu.name as breed_name,
+    r = conn.execute("""SELECT a.*,a.registration_code AS horse_id,s.name as herd_name,tz.name as color_name,tu.name as breed_name,
         tg.name as origin_name,h.name as herder_name,z.name as stable_name,
         e.name as sire_name, m.name as dam_name
         FROM horse a
@@ -1006,13 +1006,13 @@ class TrainerIn(BaseModel):
 def trainer_list():
     conn = get_db()
     return [dict(r) for r in conn.execute(
-        "SELECT u.*, COUNT(au.id) as horse_count FROM trainer u LEFT JOIN horse_trainer au ON u.id=au.trainer_id AND au.active=1 WHERE u.active=1 GROUP BY u.id ORDER BY u.name"
+        "SELECT u.*, u.address AS location, COUNT(au.id) as horse_count FROM trainer u LEFT JOIN horse_trainer au ON u.id=au.trainer_id AND au.active=1 WHERE u.active=1 GROUP BY u.id ORDER BY u.name"
     ).fetchall()]
 
 @app.get("/api/trainers/{id}")
 def trainer_get(id: int):
     conn = get_db()
-    u = conn.execute("SELECT * FROM trainer WHERE id=?", (id,)).fetchone()
+    u = conn.execute("SELECT *, address AS location FROM trainer WHERE id=?", (id,)).fetchone()
     if not u: raise HTTPException(404, "Уяач олдсонгүй")
     horse = conn.execute("""
         SELECT a.id,a.name,a.sex,a.birth_date,a.number,a.gelded,au.start_date,au.end_date
@@ -1025,14 +1025,14 @@ def trainer_get(id: int):
 def trainer_create(d: TrainerIn):
     conn = get_db()
     cur = conn.execute(
-        "INSERT INTO trainer (name,phone,location,title,notes) VALUES (?,?,?,?,?)",
+        "INSERT INTO trainer (name,phone,address,title,notes) VALUES (?,?,?,?,?)",
         (d.name,d.phone,d.location,d.title,d.notes))
     conn.commit(); return {"id": cur.lastrowid}
 
 @app.put("/api/trainers/{id}")
 def trainer_update(id: int, d: TrainerIn):
     conn = get_db()
-    conn.execute("UPDATE trainer SET name=?,phone=?,location=?,title=?,notes=? WHERE id=?",
+    conn.execute("UPDATE trainer SET name=?,phone=?,address=?,title=?,notes=? WHERE id=?",
         (d.name,d.phone,d.location,d.title,d.notes,id))
     conn.commit(); return {"ok": True}
 
@@ -1234,11 +1234,9 @@ def race_create(d: RaceIn):
 def race_update(id: int, d: RaceIn):
     conn = get_db()
     conn.execute("""UPDATE race SET
-        horse_id=?,date=?,naadam_name=?,naadam_type=?,rank=?,jockey=?,notes=?,
-        age_category=?,trainer_id=?,venue=?,province=?,sum=?,owner_text=?,distance_km=?,time=?
+        horse_id=?,date=?,naadam_name=?,rank=?,jockey=?,notes=?
         WHERE id=?""",
-        (d.horse_id,d.date,d.naadam_name,d.naadam_type,d.rank,d.jockey,d.notes,
-         d.age_category,d.trainer_id,d.venue,d.province,d.sum,d.owner_text,d.distance_km,d.time,id))
+        (d.horse_id,d.date,d.naadam_name,d.rank,d.jockey,d.notes,id))
     conn.commit()
     return {"ok": True}
 

@@ -100,7 +100,7 @@ def init_db():
         distance_text TEXT, naadam_id INTEGER, trainer_id INTEGER,
         jockey TEXT, age_category TEXT, rank INTEGER,
         naadam_type TEXT, naadam_name TEXT,
-        province TEXT, district TEXT,
+        province TEXT, sum TEXT,
         owner_text TEXT, breed_text TEXT,
         distance_km REAL, time TEXT, venue TEXT
     );
