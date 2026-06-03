@@ -5,6 +5,9 @@ data/*.db
 backend/horse.db
 frontend/uploads/
 
+# ── Production DB backups (real data — never commit) ──
+prod_backups/
+
 # ── Legacy source data (large binary .mdb files from old system) ──
 noots/
 noots2/
