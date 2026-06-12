@@ -3,7 +3,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-import csv, io
+import csv, io, calendar
+from datetime import date, timedelta
 from pydantic import BaseModel
 from typing import Optional, List
 import os, sys
@@ -100,6 +101,14 @@ def startup():
             conn.execute(f"ALTER TABLE practice_race ADD COLUMN {col} {typ}")
     conn.commit()
     conn.close()
+    # hoof_care хүснэгтэд шинэ талбар нэмэх migration (Туурай: ажлын төрөл + хариуцагч)
+    conn = get_db()
+    existing = [row[1] for row in conn.execute("PRAGMA table_info(hoof_care)").fetchall()]
+    for col, typ in [("care_type", "TEXT"), ("assignee", "TEXT")]:
+        if col not in existing:
+            conn.execute(f"ALTER TABLE hoof_care ADD COLUMN {col} {typ}")
+    conn.commit()
+    conn.close()
 
 @app.get("/")
 def root(): return FileResponse(os.path.join(FRONTEND, "index.html"))
@@ -152,7 +161,7 @@ def stats():
         "mare": conn.execute("SELECT COUNT(*) FROM horse WHERE sex='mare' AND active=1").fetchone()[0],
         "herd": conn.execute("SELECT COUNT(*) FROM herd WHERE active=1").fetchone()[0],
         "contact": conn.execute("SELECT COUNT(*) FROM contact").fetchone()[0],
-        "task_pending": conn.execute("SELECT COUNT(*) FROM task WHERE status='pending'").fetchone()[0],
+        "task_pending": conn.execute("SELECT COUNT(*) FROM tasks WHERE status IN ('planned','late')").fetchone()[0],
     }
 
 # ── ADUU ──
@@ -751,39 +760,271 @@ def stable_delete(id: int):
     conn.execute("UPDATE stable SET active=0 WHERE id=?",(id,))
     conn.commit(); return {"ok": True}
 
-# ── AJIL ──
-@app.get("/api/tasks")
-def task_list(status: Optional[str]=None, limit: int=50):
-    conn = get_db()
-    sql = "SELECT aj.*,h.name as assigned_to_name FROM task aj LEFT JOIN contact h ON aj.assigned_to_id=h.id WHERE 1=1"
-    p = []
-    if status: sql += " AND aj.status=?"; p.append(status)
-    return [dict(r) for r in conn.execute(sql+" ORDER BY aj.date LIMIT ?", p+[limit]).fetchall()]
+# ── Ажлуудын төлөвлөгөө (Арчилгааны хуваарь) ──
+TASK_TYPES = {
+    'vaccine': 'Вакцин хийлгэх',
+    'vet': 'Малын эмчийн үзлэг',
+    'hoof': 'Туурай засах',
+    'pregnancy_check': 'Гүүний хээл шалгах',
+    'branding': 'Унага тамгалах',
+    'race': 'Уралдах хуваарь',
+    'other': 'Бусад',
+}
+
+TASK_TYPE_COLORS = {
+    'vaccine': '#1D9E75',
+    'vet': '#378ADD',
+    'hoof': '#EF9F27',
+    'branding': '#D4537E',
+    'race': '#7F77DD',
+    'pregnancy_check': '#639922',
+    'other': '#888888',
+}
+
+def _next_recurrence_date(scheduled_date: str, recurrence: str) -> Optional[str]:
+    if not recurrence or recurrence == 'none':
+        return None
+    y, m, d = [int(x) for x in scheduled_date.split('-')]
+    if recurrence == 'yearly':
+        return f"{y+1:04d}-{m:02d}-{d:02d}"
+    if recurrence == 'monthly':
+        m2, y2 = m + 1, y
+        if m2 > 12: m2 = 1; y2 += 1
+        d2 = min(d, calendar.monthrange(y2, m2)[1])
+        return f"{y2:04d}-{m2:02d}-{d2:02d}"
+    if recurrence == 'quarterly':
+        m2, y2 = m + 3, y
+        while m2 > 12: m2 -= 12; y2 += 1
+        d2 = min(d, calendar.monthrange(y2, m2)[1])
+        return f"{y2:04d}-{m2:02d}-{d2:02d}"
+    return None
+
+def _task_dict(conn, row) -> dict:
+    r = dict(row)
+    r['task_type_label'] = TASK_TYPES.get(r['task_type'], r['task_type'])
+    r['color'] = TASK_TYPE_COLORS.get(r['task_type'], '#888888')
+    horses = conn.execute(
+        "SELECT h.id, h.name FROM task_horses th JOIN horse h ON th.horse_id=h.id WHERE th.task_id=?",
+        (r['id'],)
+    ).fetchall()
+    r['horses'] = [dict(x) for x in horses]
+    if r.get('herd_id'):
+        herd = conn.execute("SELECT name FROM herd WHERE id=?", (r['herd_id'],)).fetchone()
+        r['herd_name'] = herd['name'] if herd else None
+    return r
+
+def _resolve_task_horse_ids(conn, row) -> List[int]:
+    link_type = row['horse_link_type']
+    if link_type == 'herd' and row['herd_id']:
+        rows = conn.execute("SELECT id FROM horse WHERE herd_id=? AND active=1", (row['herd_id'],)).fetchall()
+        return [r['id'] for r in rows]
+    if link_type == 'specific':
+        rows = conn.execute("SELECT horse_id FROM task_horses WHERE task_id=?", (row['id'],)).fetchall()
+        return [r['horse_id'] for r in rows]
+    # 'filter' (Бүх адуу) эсвэл тодорхойгүй
+    rows = conn.execute("SELECT id FROM horse WHERE active=1").fetchall()
+    return [r['id'] for r in rows]
+
+# Ажил дуусгахад "Адуу" профайлын аль хүснэгтэд тэмдэглэл нэмэхийг тодорхойлно
+HEALTH_RECORD_TASK_TYPES = {'vaccine': 'Тарилга', 'vet': 'Эмчилгээ'}
+
+def _sync_task_completion_to_horse_records(conn, row, completed_date: str, completion_notes: Optional[str]):
+    task_type = row['task_type']
+    if task_type not in HEALTH_RECORD_TASK_TYPES and task_type != 'hoof':
+        return
+    horse_ids = _resolve_task_horse_ids(conn, row)
+    if task_type in HEALTH_RECORD_TASK_TYPES:
+        rt = HEALTH_RECORD_TASK_TYPES[task_type]
+        for hid in horse_ids:
+            conn.execute(
+                "INSERT INTO health_record (horse_id,date,type,product,amount,vet,notes) VALUES (?,?,?,?,?,?,?)",
+                (hid, completed_date, rt, row['title'], None, row['external_provider'], completion_notes)
+            )
+    elif task_type == 'hoof':
+        for hid in horse_ids:
+            conn.execute(
+                "INSERT INTO hoof_care (horse_id,date,next_date,type,notes,farrier,care_type,assignee) VALUES (?,?,?,?,?,?,?,?)",
+                (hid, completed_date, None, None, completion_notes, row['external_provider'], row['title'], row['assignee'])
+            )
+
+def _clone_task_with_horses(conn, row, new_date: str) -> int:
+    cur = conn.execute(
+        """INSERT INTO tasks (task_type,title,scheduled_date,assignee,external_provider,horse_link_type,herd_id,filter_json,recurrence,notes)
+           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+        (row['task_type'], row['title'], new_date, row['assignee'], row['external_provider'],
+         row['horse_link_type'], row['herd_id'], row['filter_json'], row['recurrence'], row['notes'])
+    )
+    new_id = cur.lastrowid
+    for h in conn.execute("SELECT horse_id FROM task_horses WHERE task_id=?", (row['id'],)).fetchall():
+        conn.execute("INSERT INTO task_horses (task_id,horse_id) VALUES (?,?)", (new_id, h['horse_id']))
+    return new_id
+
+@app.get("/api/task_types")
+def task_types_list():
+    return [{"value": k, "label": v, "color": TASK_TYPE_COLORS.get(k, '#888888')} for k, v in TASK_TYPES.items()]
 
 class TaskIn(BaseModel):
-    name: str
+    task_type: str
+    title: Optional[str]=None
+    scheduled_date: str
+    assignee: Optional[str]=None
+    external_provider: Optional[str]=None
+    horse_link_type: Optional[str]=None   # 'specific','herd','filter'
+    horse_ids: Optional[List[int]]=None   # horse_link_type='specific'
+    herd_id: Optional[int]=None           # horse_link_type='herd'
+    filter_json: Optional[str]=None       # horse_link_type='filter'
+    recurrence: Optional[str]='none'      # 'none','yearly','quarterly','monthly'
     notes: Optional[str]=None
-    date: Optional[str]=None
-    time: Optional[str]=None
-    repeat: Optional[str]='once'
-    priority: Optional[str]='dundaj'
+
+@app.get("/api/tasks")
+def tasks_list(month: Optional[str]=None, herd_id: Optional[int]=None,
+                assignee: Optional[str]=None, status: Optional[str]=None, limit: int=200):
+    conn = get_db()
+    sql = "SELECT * FROM tasks WHERE 1=1"
+    p = []
+    if month: sql += " AND scheduled_date LIKE ?"; p.append(month + '%')
+    if herd_id: sql += " AND herd_id=?"; p.append(herd_id)
+    if assignee: sql += " AND assignee=?"; p.append(assignee)
+    if status: sql += " AND status=?"; p.append(status)
+    sql += " ORDER BY scheduled_date LIMIT ?"; p.append(limit)
+    rows = conn.execute(sql, p).fetchall()
+    return [_task_dict(conn, r) for r in rows]
+
+@app.get("/api/tasks/upcoming")
+def tasks_upcoming():
+    conn = get_db()
+    today = date.today()
+    end = today + timedelta(days=7)
+    rows = conn.execute(
+        "SELECT * FROM tasks WHERE status IN ('planned','late') AND scheduled_date BETWEEN ? AND ? ORDER BY scheduled_date",
+        (today.isoformat(), end.isoformat())
+    ).fetchall()
+    return [_task_dict(conn, r) for r in rows]
+
+@app.get("/api/tasks/horse/{horse_id}")
+def tasks_for_horse(horse_id: int):
+    conn = get_db()
+    horse = conn.execute("SELECT herd_id FROM horse WHERE id=?", (horse_id,)).fetchone()
+    herd_id = horse['herd_id'] if horse else None
+    specific_ids = {r['task_id'] for r in conn.execute(
+        "SELECT task_id FROM task_horses WHERE horse_id=?", (horse_id,)
+    ).fetchall()}
+    rows = conn.execute("SELECT * FROM tasks ORDER BY scheduled_date DESC").fetchall()
+    result = []
+    for r in rows:
+        link = r['horse_link_type']
+        if link == 'specific':
+            matches = r['id'] in specific_ids
+        elif link == 'herd':
+            matches = herd_id is not None and r['herd_id'] == herd_id
+        else:  # 'filter' (Бүх адуу) эсвэл тодорхойгүй
+            matches = True
+        if not matches:
+            continue
+        d = _task_dict(conn, r)
+        logs = conn.execute(
+            "SELECT * FROM task_logs WHERE task_id=? ORDER BY logged_at DESC", (d['id'],)
+        ).fetchall()
+        d['logs'] = [dict(x) for x in logs]
+        result.append(d)
+    return result
 
 @app.post("/api/tasks")
 def task_create(d: TaskIn):
     conn = get_db()
-    cur = conn.execute("INSERT INTO task (name,notes,date,time,repeat,priority) VALUES (?,?,?,?,?,?)",(d.name,d.notes,d.date,d.time,d.repeat,d.priority))
-    conn.commit(); return {"id": cur.lastrowid}
+    cur = conn.execute(
+        """INSERT INTO tasks (task_type,title,scheduled_date,assignee,external_provider,horse_link_type,herd_id,filter_json,recurrence,notes)
+           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+        (d.task_type, d.title, d.scheduled_date, d.assignee, d.external_provider,
+         d.horse_link_type, d.herd_id, d.filter_json, d.recurrence or 'none', d.notes)
+    )
+    task_id = cur.lastrowid
+    if d.horse_link_type == 'specific' and d.horse_ids:
+        for hid in d.horse_ids:
+            conn.execute("INSERT INTO task_horses (task_id,horse_id) VALUES (?,?)", (task_id, hid))
+    conn.commit(); return {"id": task_id}
 
-@app.put("/api/tasks/{id}/status")
-def task_status(id: int, status: str=Form(...)):
+@app.put("/api/tasks/{id}")
+def task_update(id: int, d: TaskIn):
     conn = get_db()
-    conn.execute("UPDATE task SET status=? WHERE id=?",(status,id))
+    if not conn.execute("SELECT id FROM tasks WHERE id=?", (id,)).fetchone():
+        raise HTTPException(404, "Ажил олдсонгүй")
+    conn.execute(
+        """UPDATE tasks SET task_type=?,title=?,scheduled_date=?,assignee=?,external_provider=?,
+           horse_link_type=?,herd_id=?,filter_json=?,recurrence=?,notes=? WHERE id=?""",
+        (d.task_type, d.title, d.scheduled_date, d.assignee, d.external_provider,
+         d.horse_link_type, d.herd_id, d.filter_json, d.recurrence or 'none', d.notes, id)
+    )
+    if d.horse_link_type == 'specific':
+        conn.execute("DELETE FROM task_horses WHERE task_id=?", (id,))
+        for hid in (d.horse_ids or []):
+            conn.execute("INSERT INTO task_horses (task_id,horse_id) VALUES (?,?)", (id, hid))
+    conn.commit(); return {"ok": True}
+
+class TaskCompleteIn(BaseModel):
+    completed_date: Optional[str]=None
+    completion_notes: Optional[str]=None
+
+@app.post("/api/tasks/{id}/complete")
+def task_complete(id: int, d: TaskCompleteIn):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM tasks WHERE id=?", (id,)).fetchone()
+    if not row: raise HTTPException(404, "Ажил олдсонгүй")
+    completed_date = d.completed_date or date.today().isoformat()
+    conn.execute(
+        "UPDATE tasks SET status='done', completed_date=?, completion_notes=? WHERE id=?",
+        (completed_date, d.completion_notes, id)
+    )
+    conn.execute(
+        "INSERT INTO task_logs (task_id,action,reason,new_date) VALUES (?,?,?,?)",
+        (id, 'completed', d.completion_notes, None)
+    )
+    _sync_task_completion_to_horse_records(conn, row, completed_date, d.completion_notes)
+    new_id = None
+    next_date = _next_recurrence_date(row['scheduled_date'], row['recurrence'])
+    if next_date:
+        new_id = _clone_task_with_horses(conn, row, next_date)
+    conn.commit()
+    return {"ok": True, "new_task_id": new_id}
+
+class TaskLateIn(BaseModel):
+    reason: Optional[str]=None
+    new_date: Optional[str]=None
+
+@app.post("/api/tasks/{id}/late")
+def task_late(id: int, d: TaskLateIn):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM tasks WHERE id=?", (id,)).fetchone()
+    if not row: raise HTTPException(404, "Ажил олдсонгүй")
+    conn.execute("UPDATE tasks SET status='late' WHERE id=?", (id,))
+    conn.execute(
+        "INSERT INTO task_logs (task_id,action,reason,new_date) VALUES (?,?,?,?)",
+        (id, 'late', d.reason, d.new_date)
+    )
+    new_id = None
+    if d.new_date:
+        new_id = _clone_task_with_horses(conn, row, d.new_date)
+    conn.commit()
+    return {"ok": True, "new_task_id": new_id}
+
+class TaskCancelIn(BaseModel):
+    reason: Optional[str]=None
+
+@app.post("/api/tasks/{id}/cancel")
+def task_cancel(id: int, d: TaskCancelIn):
+    conn = get_db()
+    if not conn.execute("SELECT id FROM tasks WHERE id=?", (id,)).fetchone():
+        raise HTTPException(404, "Ажил олдсонгүй")
+    conn.execute("UPDATE tasks SET status='cancelled' WHERE id=?", (id,))
+    conn.execute("INSERT INTO task_logs (task_id,action,reason) VALUES (?,?,?)", (id, 'cancelled', d.reason))
     conn.commit(); return {"ok": True}
 
 @app.delete("/api/tasks/{id}")
 def task_delete(id: int):
     conn = get_db()
-    conn.execute("DELETE FROM task WHERE id=?",(id,))
+    conn.execute("DELETE FROM task_horses WHERE task_id=?", (id,))
+    conn.execute("DELETE FROM task_logs WHERE task_id=?", (id,))
+    conn.execute("DELETE FROM tasks WHERE id=?", (id,))
     conn.commit(); return {"ok": True}
 
 # ── SUNGAA ──
@@ -1345,6 +1586,8 @@ class HoofCareIn(BaseModel):
     type: Optional[str]=None
     notes: Optional[str]=None
     farrier: Optional[str]=None
+    care_type: Optional[str]=None
+    assignee: Optional[str]=None
 
 @app.get("/api/hoof_care")
 def hoof_care_list(horse_id: Optional[int]=None):
@@ -1358,8 +1601,8 @@ def hoof_care_list(horse_id: Optional[int]=None):
 @app.post("/api/hoof_care")
 def hoof_care_create(d: HoofCareIn):
     conn = get_db()
-    cur = conn.execute("INSERT INTO hoof_care (horse_id,date,next_date,type,notes,farrier) VALUES (?,?,?,?,?,?)",
-        (d.horse_id,d.date,d.next_date,d.type,d.notes,d.farrier))
+    cur = conn.execute("INSERT INTO hoof_care (horse_id,date,next_date,type,notes,farrier,care_type,assignee) VALUES (?,?,?,?,?,?,?,?)",
+        (d.horse_id,d.date,d.next_date,d.type,d.notes,d.farrier,d.care_type,d.assignee))
     conn.commit(); return {"id": cur.lastrowid}
 
 @app.delete("/api/hoof_care/{id}")

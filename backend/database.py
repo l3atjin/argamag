@@ -268,12 +268,46 @@ def init_db():
         notes TEXT, original_text TEXT
     );
 
-    -- ── TASK ──
+    -- ── TASK (legacy, replaced by tasks/task_horses/task_logs below) ──
     CREATE TABLE IF NOT EXISTS task (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT, notes TEXT, date TEXT, time TEXT,
         repeat TEXT DEFAULT 'once', priority TEXT DEFAULT 'medium',
         status TEXT DEFAULT 'pending', assigned_to_id INTEGER
+    );
+
+    -- ── Ажлуудын төлөвлөгөө (арчилгааны хуваарь) ──
+    CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_type TEXT NOT NULL,
+        title TEXT,
+        scheduled_date DATE NOT NULL,
+        assignee TEXT,
+        external_provider TEXT,
+        horse_link_type TEXT,
+        herd_id INTEGER,
+        filter_json TEXT,
+        recurrence TEXT DEFAULT 'none',
+        notes TEXT,
+        status TEXT DEFAULT 'planned',
+        completed_date DATE,
+        completion_notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS task_horses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id INTEGER REFERENCES tasks(id),
+        horse_id INTEGER REFERENCES horse(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS task_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id INTEGER REFERENCES tasks(id),
+        action TEXT,
+        reason TEXT,
+        new_date DATE,
+        logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     -- ── FINANCE RECORD ──

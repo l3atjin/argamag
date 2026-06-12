@@ -119,6 +119,9 @@ tr:hover td{background:var(--amber-l)}
 .modal-header h3{font-size:15px;font-weight:700}
 .modal-body{padding:16px 18px}
 .modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--card)}
+.modal.modal-inline{max-width:640px;max-height:calc(100vh - 230px);overflow-y:auto;box-shadow:none;border:1px solid var(--border)}
+.modal.modal-inline .modal-header,.modal.modal-inline .modal-footer{position:sticky}
+.modal.modal-inline .modal-header button,.modal.modal-inline .modal-footer .btn-outline{display:none}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-group{display:flex;flex-direction:column;gap:4px}
 .form-group.full{grid-column:1/-1}
@@ -311,10 +314,7 @@ textarea.form-control{resize:vertical;min-height:60px}
     <div class="nav-item active" onclick="showPage('dashboard')"><span class="ni">📊</span> Тойм</div>
     <div class="nav-item" onclick="showPage('horse')"><span class="ni">📋</span> Адуу<span class="nb" id="nb-horse">—</span></div>
     <div class="nav-item" onclick="showPage('horse-nemeh')"><span class="ni">➕</span> Адуу нэмэх</div>
-    <div class="nav-item" onclick="showPage('hialbar')"><span class="ni">#</span> Хялбар нэмэх</div>
-    <div class="nav-item" onclick="showPage('stable')"><span class="ni">🏠</span> Зүчээ/Бэлчээр</div>
-    <div class="nav-item" onclick="showPage('task')"><span class="ni">📅</span> Ажил төлөвлөх<span class="nb" id="nb-task">—</span></div>
-    <div class="nav-item" onclick="showPage('trainer')"><span class="ni">🤠</span> Уяач<span class="nb" id="nb-trainer">—</span></div>
+    <div class="nav-item" onclick="showPage('task')"><span class="ni">📅</span> Төлөвлөгөө<span class="nb" id="nb-task">—</span></div>
     <div class="nav-item" onclick="showPage('training_session')"><span class="ni">🏃</span> Морь сойх</div>
     <div class="nav-item" onclick="showPage('practice_race')"><span class="ni">🏆</span> Наадам</div>
     <div class="nav-item" onclick="showPage('herd')"><span class="ni">🐎</span> Сүрэг<span class="nb" id="nb-herd">—</span></div>
@@ -689,7 +689,7 @@ async function doLogout() {
   setTimeout(() => location.reload(), 200);
 }
 
-const pageTitles = {dashboard:'📊 Ерөнхий тойм',herd:'Сүргийн бүртгэл',horse:'Адууны жагсаалт','horse-nemeh':'Адуу нэмэх',hialbar:'Хялбар нэмэх',stable:'Зүчээ ба Бэлчээр',task:'Ажил төлөвлөх',trainer:'🤠 Уяачийн бүртгэл',naadam:'🏇 Наадмын бүртгэл',practice_race:'🏆 Уралдааны дүн',training_session:'🏃 Морь сойх',finance_record:'Санхүү',contact:'Эзэмшигч / Малчин',option:'Тохируулга'};
+const pageTitles = {dashboard:'📊 Ерөнхий тойм',herd:'Сүргийн бүртгэл',horse:'Адууны жагсаалт','horse-nemeh':'Адуу нэмэх',task:'Төлөвлөгөө',naadam:'🏇 Наадмын бүртгэл',practice_race:'🏆 Уралдааны дүн',training_session:'🏃 Морь сойх',finance_record:'Санхүү',contact:'Эзэмшигч / Малчин',option:'Тохируулга'};
 const pageActions = {
   herd: () => '<button class="btn btn-primary" onclick="openSurgModal()">➕ Шинэ сүрэг</button>',
   horse: () => '<button class="btn btn-primary" onclick="openAduuModal()">➕ Адуу нэмэх</button>',
@@ -697,24 +697,23 @@ const pageActions = {
   contact: () => '<button class="btn btn-primary" onclick="openHolbooModal()">➕ Нэмэх</button>',
   task: () => '<button class="btn btn-primary" onclick="openAjilModal()">➕ Шинэ ажил</button>',
   finance_record: () => '<button class="btn btn-primary" onclick="openSankhuuModal(\'orlogo\')">➕ Орлого</button><button class="btn btn-outline" onclick="openSankhuuModal(\'zarlaga\')">➕ Зарлага</button>',
-  trainer: () => '<button class="btn btn-primary" onclick="openUyaachModal()">➕ Уяач нэмэх</button>',
   naadam: () => '<button class="btn btn-primary" onclick="openNaadamModal()">➕ Наадам нэмэх</button>',
   practice_race: () => '<button class="btn btn-primary" onclick="openUraldaanModal()">➕ Нэмэх</button>',
-  stable: () => '<button class="btn btn-primary" onclick="openZucheeModal()">➕ Зүчээ нэмэх</button>',
 };
 
 let currentPageName = 'herd';
 
 function showPage(name) {
+  restoreHorseModal();
   currentPageName = name;
   document.querySelectorAll('.nav-item').forEach((el,i) => {
-    const names = ['herd','horse','horse-nemeh','hialbar','stable','task','trainer','naadam','practice_race','finance_record','contact','option'];
+    const names = ['dashboard','horse','horse-nemeh','task','training_session','practice_race','herd','finance_record','option'];
     el.classList.toggle('active', names[i]===name);
   });
   document.getElementById('page-title').textContent = pageTitles[name]||name;
   document.getElementById('header-actions').innerHTML = (pageActions[name]||(() => ''))();
   closePanel();
-  const loaders = {dashboard:()=>renderDashboard(),herd:()=>renderSurg(),horse:()=>renderAduu(!srch.herd_id),"horse-nemeh":()=>renderAduuForm(),hialbar:()=>renderHialbar(),stable:()=>renderZuchee(),task:()=>renderAjil(),trainer:()=>renderUyaach(),naadam:()=>renderNaadam(),practice_race:()=>renderSungaa(),training_session:()=>renderMoriSoikh(),finance_record:()=>renderSankhuu(),contact:()=>renderHolboo(),option:()=>renderTohiruulga()};
+  const loaders = {dashboard:()=>renderDashboard(),herd:()=>renderSurg(),horse:()=>renderAduu(!srch.herd_id),"horse-nemeh":()=>renderAduuForm(),task:()=>renderAjil(),naadam:()=>renderNaadam(),practice_race:()=>renderSungaa(),training_session:()=>renderMoriSoikh(),finance_record:()=>renderSankhuu(),contact:()=>renderHolboo(),option:()=>renderTohiruulga()};
   if (loaders[name]) loaders[name]();
 }
 
@@ -728,10 +727,10 @@ async function loadStats() {
   const nbHolboo = document.getElementById('nb-contact');
   if (nbHolboo) nbHolboo.textContent = s.contact;
   document.getElementById('nb-task').textContent = s.task_pending||'—';
-  const taskData = await api('/api/tasks?status=pending&limit=5');
+  const taskData = await api('/api/tasks/upcoming');
   const el = document.getElementById('sanuulga-list');
   if (!taskData.length) { el.innerHTML = '<div style="color:#666;font-size:10px;text-align:center">Ажил байхгүй</div>'; return; }
-  el.innerHTML = taskData.map(a => '<div class="sanuulga-item"><div class="sanuulga-name">'+a.name+'</div><div class="sanuulga-date">'+(a.date||'—')+'</div><span class="sanuulga-priority er-'+a.priority+'">'+(a.priority==='ondor'?'Өндөр':a.priority==='dundaj'?'Дундаж':'Нам')+'</span></div>').join('');
+  el.innerHTML = taskData.slice(0,5).map(a => '<div class="sanuulga-item"><div class="sanuulga-name">'+(a.title||a.task_type_label)+'</div><div class="sanuulga-date">'+(a.scheduled_date||'—')+'</div><span class="sanuulga-priority" style="background:'+a.color+'22;color:'+a.color+'">'+a.task_type_label+'</span></div>').join('');
 }
 
 async function loadConfigs() {
@@ -758,9 +757,43 @@ function stableOptions(sel=null) {
 }
 
 // ── СҮРЭГ ──
+let currentSurgSubTab = 'herd';
+
 async function renderSurg() {
-  const herds = await api('/api/herds');
   const mc = document.getElementById('main-content');
+  mc.innerHTML = '<div class="tabs" id="surg-tabs">' +
+    '<div class="tab" onclick="switchSurgTab(\'herd\')">🐎 Сүрэг</div>' +
+    '<div class="tab" onclick="switchSurgTab(\'trainer\')">🤠 Уяач</div>' +
+    '<div class="tab" onclick="switchSurgTab(\'stable\')">🏠 Зүчээ/Бэлчээр</div>' +
+    '</div><div id="surg-subtab-content"></div>';
+  const idx = {herd:0,trainer:1,stable:2}[currentSurgSubTab];
+  document.querySelectorAll('#surg-tabs .tab').forEach((el,i)=>el.classList.toggle('active', i===idx));
+  await loadSurgSubTab(currentSurgSubTab);
+}
+
+async function switchSurgTab(t) {
+  currentSurgSubTab = t;
+  const idx = {herd:0,trainer:1,stable:2}[t];
+  document.querySelectorAll('#surg-tabs .tab').forEach((el,i)=>el.classList.toggle('active', i===idx));
+  await loadSurgSubTab(t);
+}
+
+async function loadSurgSubTab(t) {
+  if (t === 'herd') {
+    document.getElementById('header-actions').innerHTML = '<button class="btn btn-primary" onclick="openSurgModal()">➕ Шинэ сүрэг</button>';
+    await renderSurgHerdList();
+  } else if (t === 'trainer') {
+    document.getElementById('header-actions').innerHTML = '<button class="btn btn-primary" onclick="openUyaachModal()">➕ Уяач нэмэх</button>';
+    await renderUyaach();
+  } else if (t === 'stable') {
+    document.getElementById('header-actions').innerHTML = '<button class="btn btn-primary" onclick="openZucheeModal(\'stable\')">➕ Зүчээ нэмэх</button>';
+    await renderZuchee();
+  }
+}
+
+async function renderSurgHerdList() {
+  const herds = await api('/api/herds');
+  const mc = document.getElementById('surg-subtab-content');
   if (!herds.length) { mc.innerHTML = '<div class="empty"><div class="empty-icon">🐴</div><div class="empty-text">Сүрэг бүртгэгдээгүй байна</div><br><button class="btn btn-primary" onclick="openSurgModal()">➕ Шинэ сүрэг нэмэх</button></div>'; return; }
   mc.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">' + herds.map(s =>
     '<div class="card" onclick="showSurgDetail('+s.id+')">' +
@@ -1135,17 +1168,16 @@ async function openDetailFullscreen(h, pedigree) {
 
   // Tab хэсэг
   const tabBar = document.createElement('div');
-  tabBar.style.cssText = 'background:#fff;border-bottom:2px solid #e5e0d8;display:flex;gap:0;flex-shrink:0;padding:0 32px';
-  const tabs = ['Үндсэн','Зураг','Удмын мод','Үр төл','Амжилт','Эрүүл мэнд','Хэмжилт','Тах','Тэжээл','АИЭ','Уяач','Морь сойх','Хээл хаясан','Сувайрсан'];
-  // Эр адуунд Хээл хаясан(12), Сувайрсан(13) tab нуух
-  // Эм адуунд Морь сойх(11) tab нуух
-  const hiddenTabs = (h.sex === 'stallion'||h.sex === 'gelding') ? [12,13] : (h.sex === 'mare' ? [4,10,11] : []);
+  tabBar.style.cssText = 'background:#fff;border-bottom:2px solid #e5e0d8;display:flex;gap:0;flex-shrink:0;padding:0 32px;overflow-x:auto;white-space:nowrap';
+  const tabs = ['Үндсэн','Амжилт','Удмын мод','Сойлго','Арчилгаа'];
+  // Гүүнд Амжилт(1), Сойлго(3) tab нуух
+  const hiddenTabs = h.sex === 'mare' ? [1,3] : [];
   tabs.forEach((t,i) => {
     if (hiddenTabs.includes(i)) return;
     const btn = document.createElement('button');
     btn.textContent = t;
     btn.dataset.tab = i;
-    btn.style.cssText = 'padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:#888;border-bottom:2px solid transparent;margin-bottom:-2px';
+    btn.style.cssText = 'padding:10px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:#888;border-bottom:2px solid transparent;margin-bottom:-2px;flex-shrink:0';
     btn.onclick = () => switchDetailTab(i);
     tabBar.appendChild(btn);
   });
@@ -1154,7 +1186,22 @@ async function openDetailFullscreen(h, pedigree) {
   const body = document.createElement('div');
   body.style.cssText = 'flex:1;overflow-y:auto';
 
-  // Tab 0: Үндсэн
+  // Дэд-таб (pill) мөр үүсгэх
+  function buildSubTabBar(groupIdx, pills) {
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;gap:4px;border-bottom:1px solid #e5e0d8;margin-bottom:16px;overflow-x:auto;white-space:nowrap';
+    pills.forEach(p => {
+      const b = document.createElement('button');
+      b.textContent = p.label;
+      b.dataset.subtab = p.old;
+      b.style.cssText = 'padding:8px 14px;border:none;border-bottom:2px solid transparent;background:none;cursor:pointer;font-size:12px;font-weight:400;color:#888;flex-shrink:0';
+      b.addEventListener('click', () => switchDetailSubTab(groupIdx, p.old));
+      bar.appendChild(b);
+    });
+    return bar;
+  }
+
+  // Tab 0: Үндсэн (+ Зургийн цомог)
   const tab0 = document.createElement('div');
   tab0.dataset.tabContent = '0';
   tab0.style.cssText = 'padding:24px 32px';
@@ -1176,106 +1223,88 @@ async function openDetailFullscreen(h, pedigree) {
         fsRow('Сүрэг', h.herd_name||'') +
       '</table>' +
       '<div>' + buildCarousel(h.photos||[]) + '</div>' +
+    '</div>' +
+    '<div style="margin-top:28px">' +
+      '<div style="font-size:13px;font-weight:700;color:#555;margin-bottom:12px">Зургийн цомог</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:12px">' +
+        (h.photos&&h.photos.length ? h.photos.map((z,i)=>
+          '<div style="position:relative;cursor:pointer" onclick="carouselFsGo('+i+')">' +
+          '<img src="/uploads/'+z.file+'" style="width:160px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e0ddd6">' +
+          (z.notes?'<div style="font-size:10px;color:#888;margin-top:4px;max-width:160px">'+z.notes+'</div>':'') +
+          '</div>').join('') :
+          '<div style="color:#aaa;text-align:center;padding:40px;width:100%">Зураг байхгүй байна</div>') +
+      '</div>' +
     '</div>';
 
-  // Tab 1: Зураг
+  // Tab 1: Амжилт (хуучин Уралдаан)
   const tab1 = document.createElement('div');
   tab1.dataset.tabContent = '1';
   tab1.style.cssText = 'padding:24px 32px;display:none';
-  tab1.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:12px">' +
-    (h.photos&&h.photos.length ? h.photos.map((z,i)=>
-      '<div style="position:relative;cursor:pointer" onclick="carouselFsGo('+i+')">' +
-      '<img src="/uploads/'+z.file+'" style="width:160px;height:120px;object-fit:cover;border-radius:8px;border:1px solid #e0ddd6">' +
-      (z.notes?'<div style="font-size:10px;color:#888;margin-top:4px;max-width:160px">'+z.notes+'</div>':'') +
-      '</div>').join('') :
-      '<div style="color:#aaa;text-align:center;padding:40px;width:100%">Зураг байхгүй байна</div>') +
-    '</div>';
+  tab1.innerHTML = '<div id="detail-race-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
 
-  // Tab 2: Удмын мод
+  // Tab 2: Удмын мод (+ Үр төл дэд-таб)
   const tab2 = document.createElement('div');
   tab2.dataset.tabContent = '2';
   tab2.style.cssText = 'padding:24px 32px;display:none';
-  tab2.innerHTML = renderUdamTree(pedigree);
+  tab2.appendChild(buildSubTabBar(2, [{label:'Удмын мод',old:2},{label:'Үр төл',old:3}]));
+  const tab2tree = document.createElement('div');
+  tab2tree.dataset.subcontent = '2';
+  tab2tree.innerHTML = renderUdamTree(pedigree);
+  const tab2urtol = document.createElement('div');
+  tab2urtol.dataset.subcontent = '3';
+  tab2urtol.style.display = 'none';
+  tab2urtol.innerHTML = '<div id="detail-offspring-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
+  tab2.appendChild(tab2tree);
+  tab2.appendChild(tab2urtol);
 
-  // Tab 3: Үр төл
+  // Tab 3: Сойлго (Морь сойх + Уяач дэд-таб)
   const tab3 = document.createElement('div');
   tab3.dataset.tabContent = '3';
   tab3.style.cssText = 'padding:24px 32px;display:none';
-  tab3.innerHTML = '<div id="detail-offspring-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
+  tab3.appendChild(buildSubTabBar(3, [{label:'Морь сойх',old:11},{label:'Уяач',old:10}]));
+  const tab3morisoikh = document.createElement('div');
+  tab3morisoikh.dataset.subcontent = '11';
+  tab3morisoikh.innerHTML = '<div id="detail-morisoikh-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
+  const tab3uyaach = document.createElement('div');
+  tab3uyaach.dataset.subcontent = '10';
+  tab3uyaach.style.display = 'none';
+  tab3uyaach.innerHTML = '<div id="detail-trainer-content"><div style="color:#aaa;text-align:center;padding:20px">Уншиж байна...</div></div>';
+  tab3.appendChild(tab3morisoikh);
+  tab3.appendChild(tab3uyaach);
 
-  // Tab 4: Уралдаан
+  // Tab 4: Арчилгаа (Эрүүл мэнд + Хэмжилт + Тах + Тэжээл + АИЭ + Хээл хаясан + Сувайрсан дэд-таб)
   const tab4 = document.createElement('div');
   tab4.dataset.tabContent = '4';
   tab4.style.cssText = 'padding:24px 32px;display:none';
-  tab4.innerHTML = '<div id="detail-race-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
-
-  // Tab 5: Эрүүл мэнд
-  const tab5 = document.createElement('div');
-  tab5.dataset.tabContent = '5';
-  tab5.style.cssText = 'padding:24px 32px;display:none';
-  tab5.innerHTML = '<div id="detail-eruul-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
-
-  // Tab 6: Хэмжилт
-  const tab6 = document.createElement('div');
-  tab6.dataset.tabContent = '6';
-  tab6.style.cssText = 'padding:24px 32px;display:none';
-  tab6.innerHTML = '<div id="detail-measurement-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
-
-  // Tab 7: Тах
-  const tab7 = document.createElement('div');
-  tab7.dataset.tabContent = '7';
-  tab7.style.cssText = 'padding:24px 32px;display:none';
-  tab7.innerHTML = '<div id="detail-hoof_care-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
-
-  // Tab 8: Тэжээл
-  const tab8 = document.createElement('div');
-  tab8.dataset.tabContent = '8';
-  tab8.style.cssText = 'padding:24px 32px;display:none';
-  tab8.innerHTML = '<div id="detail-feeding-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
-
-  // Tab 9: АИЭ
-  const tab9 = document.createElement('div');
-  tab9.dataset.tabContent = '9';
-  tab9.style.cssText = 'padding:24px 32px;display:none';
-  tab9.innerHTML = '<div id="detail-eia_test-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
-
-  // Tab 10: Уяач
-  const tab10 = document.createElement('div');
-  tab10.dataset.tabContent = '10';
-  tab10.style.cssText = 'padding:24px 32px;display:none';
-  tab10.innerHTML = '<div id="detail-trainer-content"><div style="color:#aaa;text-align:center;padding:20px">Уншиж байна...</div></div>';
-
-  // Tab 11: Сүнгаа
-  const tab11 = document.createElement('div');
-  tab11.dataset.tabContent = '11';
-  tab11.style.cssText = 'padding:24px 32px;display:none';
-  tab11.innerHTML = '<div id="detail-morisoikh-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
-
-  // Tab 12: Нөхөн үржихүй
-  const tab12 = document.createElement('div');
-  tab12.dataset.tabContent = '12';
-  tab12.style.cssText = 'padding:24px 32px;display:none';
-  tab12.innerHTML = '<div id="detail-breeding_event-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
-
-  const tab13 = document.createElement('div');
-  tab13.dataset.tabContent = '13';
-  tab13.style.cssText = 'padding:24px 32px;display:none';
-  tab13.innerHTML = '<div id="detail-suvairsan-content"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
+  // Азарга/морьд Хээл хаясан, Сувайрсан нуух
+  const hideBreeding = (h.sex === 'stallion' || h.sex === 'gelding');
+  const arc4Items = [
+    {label:'Эрүүл мэнд', old:5, id:'detail-eruul-content'},
+    {label:'Хэмжилт', old:6, id:'detail-measurement-content'},
+    {label:'Туурай', old:7, id:'detail-hoof_care-content'},
+    {label:'Тэжээл', old:8, id:'detail-feeding-content'},
+    {label:'Хээл хаясан', old:12, id:'detail-breeding_event-content'},
+    {label:'Сувайрсан', old:13, id:'detail-suvairsan-content'},
+  ].filter(it => !hideBreeding || (it.old !== 12 && it.old !== 13));
+  const tab4TaskSummary = document.createElement('div');
+  tab4TaskSummary.id = 'detail-archilgaa-tasks';
+  tab4TaskSummary.style.marginBottom = '20px';
+  tab4TaskSummary.innerHTML = '<div style="color:#aaa;text-align:center;padding:20px">Уншиж байна...</div>';
+  tab4.appendChild(tab4TaskSummary);
+  tab4.appendChild(buildSubTabBar(4, arc4Items.map(it=>({label:it.label,old:it.old}))));
+  arc4Items.forEach(it => {
+    const d = document.createElement('div');
+    d.dataset.subcontent = it.old;
+    if (it.old !== 5) d.style.display = 'none';
+    d.innerHTML = '<div id="'+it.id+'"><div style="color:#aaa;text-align:center;padding:40px">Уншиж байна...</div></div>';
+    tab4.appendChild(d);
+  });
 
   body.appendChild(tab0);
   body.appendChild(tab1);
   body.appendChild(tab2);
   body.appendChild(tab3);
   body.appendChild(tab4);
-  body.appendChild(tab5);
-  body.appendChild(tab6);
-  body.appendChild(tab7);
-  body.appendChild(tab8);
-  body.appendChild(tab9);
-  body.appendChild(tab10);
-  body.appendChild(tab11);
-  body.appendChild(tab12);
-  body.appendChild(tab13);
 
   div.appendChild(header);
   div.appendChild(tabBar);
@@ -1283,6 +1312,9 @@ async function openDetailFullscreen(h, pedigree) {
   document.body.appendChild(div);
 
   // Tab switching
+  // Бүлэг (Удмын мод/Сойлго/Арчилгаа) тус бүрийн сонгогдсон дэд-таб
+  const groupActiveSub = {2:2, 3:11, 4:5};
+
   window.switchDetailTab = function(idx) {
     tabBar.querySelectorAll('button').forEach((b) => {
       const tabIdx = parseInt(b.dataset.tab);
@@ -1293,17 +1325,34 @@ async function openDetailFullscreen(h, pedigree) {
       el.style.display = el.dataset.tabContent == idx ? 'block' : 'none';
     });
     const aid = h.id;
-    if (idx===3)  loadDetailUrTol(aid);
-    if (idx===4)  loadDetailUraldaan(aid);
-    if (idx===5)  loadDetailEruul(aid);
-    if (idx===6)  loadDetailHemjilt(aid);
-    if (idx===7)  loadDetailTah(aid);
-    if (idx===8)  loadDetailTejeel(aid);
-    if (idx===9)  loadDetailAie(aid);
-    if (idx===10) loadDetailUyaach(aid);
-    if (idx===11) loadDetailMoriSoikh(aid);
-    if (idx===12) loadDetailNokhon(aid);
-    if (idx===13) loadDetailSuvairsan(aid);
+    if (idx===1) loadDetailUraldaan(aid);
+    if (idx===2 || idx===3 || idx===4) switchDetailSubTab(idx, groupActiveSub[idx]);
+    if (idx===4) loadDetailArchilgaaTasks(aid);
+  };
+
+  // Бүлэг доторх дэд-таб сэлгэх
+  window.switchDetailSubTab = function(groupIdx, oldIdx) {
+    groupActiveSub[groupIdx] = oldIdx;
+    const group = body.querySelector('[data-tab-content="'+groupIdx+'"]');
+    group.querySelectorAll('[data-subtab]').forEach(b => {
+      const sel = parseInt(b.dataset.subtab) === oldIdx;
+      b.style.borderBottomColor = sel ? 'var(--amber-d)' : 'transparent';
+      b.style.color = sel ? 'var(--amber-d)' : '#888';
+      b.style.fontWeight = sel ? '600' : '400';
+    });
+    group.querySelectorAll('[data-subcontent]').forEach(el => {
+      el.style.display = el.dataset.subcontent == oldIdx ? 'block' : 'none';
+    });
+    const aid = h.id;
+    if (oldIdx===3)  loadDetailUrTol(aid);
+    if (oldIdx===5)  loadDetailEruul(aid);
+    if (oldIdx===6)  loadDetailHemjilt(aid);
+    if (oldIdx===7)  loadDetailTah(aid);
+    if (oldIdx===8)  loadDetailTejeel(aid);
+    if (oldIdx===10) loadDetailUyaach(aid);
+    if (oldIdx===11) loadDetailMoriSoikh(aid);
+    if (oldIdx===12) loadDetailNokhon(aid);
+    if (oldIdx===13) loadDetailSuvairsan(aid);
   };
 
   // Уяач мэдээлэл ачаалах
@@ -1618,6 +1667,80 @@ async function openDetailFullscreen(h, pedigree) {
     el.innerHTML = html;
   };
 
+  // ── Арчилгаа таб — ажлын хуваарь/түүх (Төлөвлөгөө)
+  window.loadDetailArchilgaaTasks = async function(horse_id) {
+    const el = document.getElementById('detail-archilgaa-tasks');
+    if (!el) return;
+    const data = await api('/api/tasks/horse/'+horse_id);
+    const total = data.length;
+    const done = data.filter(t=>t.status==='done').length;
+    const planned = data.filter(t=>t.status==='planned').length;
+    const late = data.filter(t=>t.status==='late').length;
+
+    const statCard = (num, label, color) => '<div style="flex:1;background:#fff;border:1px solid var(--gray-l);border-radius:10px;padding:12px;text-align:center">' +
+      '<div style="font-size:22px;font-weight:700;color:'+color+'">'+num+'</div>' +
+      '<div style="font-size:11px;color:#888;margin-top:2px">'+label+'</div></div>';
+
+    let html = '<div style="display:flex;gap:10px;margin-bottom:14px">' +
+      statCard(total,'Нийт ажил','#555') +
+      statCard(done,'Дууссан','#1D9E75') +
+      statCard(planned,'Хүлээгдэж буй','#378ADD') +
+      statCard(late,'Хоцорсон','#EF9F27') +
+    '</div>';
+
+    const pending = data.filter(t=>t.status==='planned')
+      .sort((a,b)=>(a.scheduled_date||'').localeCompare(b.scheduled_date||''));
+
+    if (pending.length) {
+      const next = pending[0];
+      html += '<div style="background:var(--amber-l);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">' +
+        '<span style="font-size:18px">⏰</span>' +
+        '<div><div style="font-weight:700;font-size:13px">Дараагийн ажил: '+(next.title||next.task_type_label)+'</div>' +
+        '<div style="font-size:11px;color:var(--amber-d)">'+(next.scheduled_date||'—')+' — '+next.task_type_label+'</div></div>' +
+      '</div>';
+    }
+
+    html += '<div style="font-size:12px;font-weight:700;color:#888;margin-bottom:6px">ХҮЛЭЭГДЭЖ БУЙ АЖЛУУД</div>';
+    if (!pending.length) {
+      html += '<div style="color:#aaa;text-align:center;padding:16px;font-size:12px">Хүлээгдэж буй ажил байхгүй</div>';
+    } else {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:18px">' +
+        '<thead><tr style="background:var(--gray-l)"><th style="padding:6px 10px;text-align:left">Огноо</th><th style="padding:6px 10px;text-align:left">Төрөл</th><th style="padding:6px 10px;text-align:left">Хариуцагч</th><th style="padding:6px 10px;text-align:left">Статус</th></tr></thead><tbody>' +
+        pending.map(t=>'<tr style="border-bottom:0.5px solid var(--border)">' +
+          '<td style="padding:6px 10px;color:var(--text-s)">'+(t.scheduled_date||'—')+'</td>' +
+          '<td style="padding:6px 10px"><span style="background:'+t.color+'22;color:'+t.color+';padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">'+(t.title||t.task_type_label)+'</span></td>' +
+          '<td style="padding:6px 10px;color:var(--text-s)">'+(t.assignee||t.external_provider||'—')+'</td>' +
+          '<td style="padding:6px 10px">'+(ajilStatusLabels[t.status]||t.status)+'</td>' +
+        '</tr>').join('') +
+        '</tbody></table>';
+    }
+
+    const history = data.filter(t=>t.status==='done'||t.status==='late'||t.status==='cancelled')
+      .sort((a,b)=>(b.scheduled_date||'').localeCompare(a.scheduled_date||''));
+    html += '<div style="font-size:12px;font-weight:700;color:#888;margin-bottom:6px">ТҮҮХ</div>';
+    if (!history.length) {
+      html += '<div style="color:#aaa;text-align:center;padding:16px;font-size:12px">Түүх байхгүй байна</div>';
+    } else {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+        '<thead><tr style="background:var(--gray-l)"><th style="padding:6px 10px;text-align:left">Огноо</th><th style="padding:6px 10px;text-align:left">Төрөл</th><th style="padding:6px 10px;text-align:left">Статус</th><th style="padding:6px 10px;text-align:left">Тэмдэглэл</th></tr></thead><tbody>' +
+        history.map(t=>{
+          let note = '';
+          if (t.status==='done') note = t.completion_notes||'';
+          else if (t.status==='late') note = ((t.logs||[]).find(l=>l.action==='late')||{}).reason||'';
+          else note = ((t.logs||[]).find(l=>l.action==='cancelled')||{}).reason||'';
+          return '<tr style="border-bottom:0.5px solid var(--border)">' +
+            '<td style="padding:6px 10px;color:var(--text-s)">'+(t.scheduled_date||'—')+'</td>' +
+            '<td style="padding:6px 10px"><span style="background:'+t.color+'22;color:'+t.color+';padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">'+(t.title||t.task_type_label)+'</span></td>' +
+            '<td style="padding:6px 10px">'+(ajilStatusLabels[t.status]||t.status)+'</td>' +
+            '<td style="padding:6px 10px;color:var(--text-s)">'+(note||'—')+'</td>' +
+          '</tr>';
+        }).join('') +
+        '</tbody></table>';
+    }
+
+    el.innerHTML = html;
+  };
+
   // ── Эрүүл мэнд
   window.loadDetailEruul = async function(horse_id) {
     const el = document.getElementById('detail-eruul-content');
@@ -1672,18 +1795,20 @@ async function openDetailFullscreen(h, pedigree) {
     el.innerHTML = html;
   };
 
-  // ── Тах
+  // ── Туурай
   window.loadDetailTah = async function(horse_id) {
     const el = document.getElementById('detail-hoof_care-content');
     const data = await api('/api/hoof_care?horse_id='+horse_id);
     let html = '<div style="display:flex;justify-content:flex-end;margin-bottom:12px">' +
       '<button onclick="openTahModal('+horse_id+')" style="background:var(--amber-d);color:#fff;border:none;border-radius:7px;padding:7px 16px;cursor:pointer;font-size:12px;font-weight:600">➕ Нэмэх</button></div>';
-    if (!data.length) { el.innerHTML = html+'<div style="color:#aaa;text-align:center;padding:40px">Тахны бүртгэл байхгүй байна</div>'; return; }
+    if (!data.length) { el.innerHTML = html+'<div style="color:#aaa;text-align:center;padding:40px">Туурайн бүртгэл байхгүй байна</div>'; return; }
     data.forEach(r => {
       html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--gray-l);border-radius:8px;margin-bottom:8px">' +
         '<div style="flex:1">' +
-          '<div style="font-size:13px;font-weight:600">'+(r.type||'Тах')+(r.notes?' — '+r.notes:'')+'</div>' +
+          '<div style="font-size:13px;font-weight:600">'+(r.care_type||r.type||'Туурай')+(r.notes?' — '+r.notes:'')+'</div>' +
+          (r.type?'<div style="font-size:11px;color:#888">Хөл: '+r.type+'</div>':'') +
           (r.farrier?'<div style="font-size:11px;color:#888">Тахчин: '+r.farrier+'</div>':'') +
+          (r.assignee?'<div style="font-size:11px;color:#888">Хариуцагч: '+r.assignee+'</div>':'') +
         '</div>' +
         '<div style="text-align:right;font-size:11px;color:#888">' +
           (r.date?'<div>'+r.date.substring(0,10)+'</div>':'') +
@@ -2171,12 +2296,30 @@ async function deleteUraldaan(id, horse_id) {
 }
 
 // ── ЭРҮҮЛ МЭНД modal
+function handleEruulTypeChange(sel) {
+  if (sel.value !== '__custom__') return;
+  const t = (prompt('Шинэ төрлийн нэр:')||'').trim();
+  if (!t) { sel.value = ''; return; }
+  const o = document.createElement('option');
+  o.textContent = t; o.value = t;
+  sel.insertBefore(o, sel.querySelector('option[value="__custom__"]'));
+  sel.value = t;
+}
 function openEruulModal(horse_id) {
-  const types = ['Тарилга','Эмчилгээ','Шимэгч устгал','Шүдний эмчилгээ','Бусад'];
+  const typeGroups = [
+    {label:'Шинжилгээ', items:['Цусны шинжилгээ','Шимэгч устгал','Шүдний эмчилгээ']},
+    {label:'Вакцин', items:['Ханиадын вакцин','Сахууны вакцин']},
+    {label:'Эмчилгээ', items:['Тарилга','Эмчилгээ']},
+    {label:'Бусад', items:['Бусад']},
+  ];
+  const typeOptions = typeGroups.map(g =>
+    '<optgroup label="'+g.label+'">'+g.items.map(t=>'<option>'+t+'</option>').join('')+
+    (g.label==='Бусад'?'<option value="__custom__">+ Шинэ төрөл нэмэх...</option>':'')+'</optgroup>'
+  ).join('');
   showQuick('Эрүүл мэнд бүртгэх',
     '<div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Огноо</label><input type="date" class="form-control" id="q-em-date" value="'+new Date().toISOString().split('T')[0]+'"></div>' +
-      '<div class="form-group"><label class="form-label">Төрөл</label><select class="form-control" id="q-em-type"><option value="">— сонгох —</option>'+types.map(t=>'<option>'+t+'</option>').join('')+'</select></div>' +
+      '<div class="form-group"><label class="form-label">Төрөл</label><select class="form-control" id="q-em-type" onchange="handleEruulTypeChange(this)"><option value="">— сонгох —</option>'+typeOptions+'</select></div>' +
     '</div>' +
     '<div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Бүтээгдэхүүн / Вакцин</label><input type="text" class="form-control" id="q-em-product"></div>' +
@@ -2234,15 +2377,19 @@ async function deleteHemjilt(id, horse_id) {
   notify('Устгагдлаа!'); loadDetailHemjilt(horse_id);
 }
 
-// ── ТАХ modal
+// ── ТУУРАЙ modal
 function openTahModal(horse_id) {
-  showQuick('Тах бүртгэх',
+  showQuick('Туурай бүртгэх',
     '<div class="form-grid">' +
       '<div class="form-group"><label class="form-label">Огноо</label><input type="date" class="form-control" id="q-hoof_care-date" value="'+new Date().toISOString().split('T')[0]+'"></div>' +
       '<div class="form-group"><label class="form-label">Дараагийн огноо</label><input type="date" class="form-control" id="q-hoof_care-dnext"></div>' +
     '</div>' +
     '<div class="form-grid">' +
-      '<div class="form-group"><label class="form-label">Төрөл</label><select class="form-control" id="q-hoof_care-type"><option value="">— сонгох —</option><option>Урд</option><option>Хойд</option><option>Урд+Хойд</option><option>Тусгай</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Төрөл</label><select class="form-control" id="q-hoof_care-care_type"><option value="">— сонгох —</option><option>гахай цэвэрлэх</option><option>туурай засах</option><option>бусад</option></select></div>' +
+      '<div class="form-group"><label class="form-label">Хариуцагч</label><input type="text" class="form-control" id="q-hoof_care-assignee"></div>' +
+    '</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-group"><label class="form-label">Хөл</label><select class="form-control" id="q-hoof_care-type"><option value="">— сонгох —</option><option>Урд</option><option>Хойд</option><option>Урд+Хойд</option><option>Тусгай</option></select></div>' +
       '<div class="form-group"><label class="form-label">Тахчин</label><input type="text" class="form-control" id="q-hoof_care-farrier"></div>' +
     '</div>' +
     '<div class="form-group"><label class="form-label">Тайлбар</label><input type="text" class="form-control" id="q-hoof_care-tail"></div>',
@@ -2252,9 +2399,11 @@ function openTahModal(horse_id) {
       next_date:document.getElementById('q-hoof_care-dnext').value||null,
       type:document.getElementById('q-hoof_care-type').value||null,
       farrier:document.getElementById('q-hoof_care-farrier').value||null,
+      care_type:document.getElementById('q-hoof_care-care_type').value||null,
+      assignee:document.getElementById('q-hoof_care-assignee').value||null,
       notes:document.getElementById('q-hoof_care-tail').value||null
     })});
-    closeQuick(); notify('Уралдаан бүртгэгдлээ!');
+    closeQuick(); notify('Туурайн бүртгэл нэмэгдлээ!');
     if(window.loadDetailTah) loadDetailTah(horse_id);
   });
 }
@@ -4700,10 +4849,38 @@ async function openAduuModal(id=null) {
     document.getElementById('f-status').value='active';
   }
   renderEzeshigchRows();
-  document.getElementById('horse-modal').classList.add('open');
+  const hModal = document.getElementById('horse-modal');
+  const hCard = document.getElementById('horse-modal-title').closest('.modal');
+  if (currentPageName === 'horse-nemeh') {
+    const slot = document.getElementById('inline-horse-form-slot');
+    if (slot) {
+      hCard.classList.add('modal-inline');
+      slot.appendChild(hCard);
+    }
+    hModal.classList.remove('open');
+  } else {
+    if (hCard.parentElement !== hModal) hModal.appendChild(hCard);
+    hCard.classList.remove('modal-inline');
+    hModal.classList.add('open');
+  }
 }
 
-function closeAduuModal() { document.getElementById('horse-modal').classList.remove('open'); }
+function closeAduuModal() {
+  if (currentPageName === 'horse-nemeh') { openAduuModal(); return; }
+  document.getElementById('horse-modal').classList.remove('open');
+}
+
+function restoreHorseModal() {
+  const titleEl = document.getElementById('horse-modal-title');
+  const hModal = document.getElementById('horse-modal');
+  if (!titleEl || !hModal) return;
+  const card = titleEl.closest('.modal');
+  if (card && card.parentElement !== hModal) {
+    card.classList.remove('modal-inline');
+    hModal.appendChild(card);
+  }
+  hModal.classList.remove('open');
+}
 
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach((t,i)=>{const names=['undsen','sodon','delgerenguui','pedigree'];t.classList.toggle('active',names[i]===name);});
@@ -4717,9 +4894,20 @@ function renderEzeshigchRows() {
   document.getElementById('owner_text-rows').innerHTML = ownerTextRows.map((e,i)=>
     '<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">' +
     '<select class="form-control" onchange="ownerTextRows['+i+'].contact_id=+this.value">'+contactOptions('owner_text',e.contact_id)+'</select>' +
+    '<button class="btn-icon" onclick="addEzeshigchContact('+i+')" title="Шинэ эзэмшигч нэмэх">＋</button>' +
     '<input type="number" class="form-control" style="width:70px" value="'+e.share_percent+'" min="1" max="100" onchange="ownerTextRows['+i+'].share_percent=+this.value" placeholder="%">' +
     '<button class="btn-icon" onclick="ownerTextRows.splice('+i+',1);renderEzeshigchRows()">✕</button></div>'
   ).join('');
+}
+
+async function addEzeshigchContact(i) {
+  const name = prompt('Эзэмшигчийн нэр:');
+  if (!name?.trim()) return;
+  const r = await api('/api/contacts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),type:'owner_text'})});
+  await loadConfigs();
+  ownerTextRows[i].contact_id = r.id;
+  renderEzeshigchRows();
+  notify('"'+name+'" нэмэгдлээ!');
 }
 
 async function saveAduu() {
@@ -4949,7 +5137,7 @@ let pedigreeParentTimer = null;
 
 async function renderHialbar() {
   await loadConfigs();
-  const mc = document.getElementById('main-content');
+  const mc = document.getElementById('horse-add-content') || document.getElementById('main-content');
   const breedTextOpts = configOptions('breed_text');
   const garalOpts  = configOptions('origin');
   const zusOpts    = configOptions('color');
@@ -5133,7 +5321,7 @@ function clearHialbar() {
 
 // ── ЗҮЧЭЭ ──
 async function renderZuchee() {
-  const mc = document.getElementById('main-content');
+  const mc = document.getElementById('surg-subtab-content') || document.getElementById('main-content');
   mc.innerHTML = '<div class="tabs" id="stable-tabs"><div class="tab active" onclick="switchZucheeTab(\'stable\')">🏠 Зүчээ</div><div class="tab" onclick="switchZucheeTab(\'belcheer\')">🌿 Бэлчээр</div></div><div id="stable-content"></div>';
   await loadZucheeContent('stable');
 }
@@ -5175,42 +5363,340 @@ async function deleteZuchee(id) {
   notify('Устгагдлаа!'); renderZuchee();
 }
 
-// ── АЖИЛ ──
+// ── Ажлуудын төлөвлөгөө (арчилгааны хуваарь) ──
+const TASK_TYPES_FE = {
+  vaccine:'Вакцин хийлгэх', vet:'Малын эмчийн үзлэг', hoof:'Туурай засах',
+  pregnancy_check:'Гүүний хээл шалгах', branding:'Унага тамгалах', race:'Уралдах хуваарь', other:'Бусад'
+};
+const ajilState = { tab:'calendar', month:null, filterStatus:'' };
+const ajilWeekdays = ['Дав','Мяг','Лха','Пүр','Баа','Бям','Ням'];
+const ajilStatusLabels = {planned:'⏳ Төлөвлөсөн', done:'✅ Дууссан', late:'⚠️ Хоцорсон', cancelled:'❌ Цуцалсан'};
+const ajilRecLabels = {none:'Давтахгүй', yearly:'Жил бүр', quarterly:'Улирал бүр', monthly:'Сар бүр'};
+
 async function renderAjil() {
-  const d = await api('/api/tasks?limit=100');
+  if (!ajilState.month) {
+    const now = new Date();
+    ajilState.month = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  }
   const mc = document.getElementById('main-content');
-  mc.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Ажлын нэр</th><th>Огноо</th><th>Эрэмбэ</th><th>Хуваарилагдсан</th><th>Статус</th><th></th></tr></thead><tbody>' +
-    (d.length?d.map(a=>'<tr><td><div class="t-name">'+a.name+'</div>'+(a.notes?'<div class="t-sub">'+a.notes+'</div>':'')+'</td><td>'+(a.date||'—')+' '+(a.time||'')+'</td><td><span class="sanuulga-priority er-'+a.priority+'">'+(a.priority==='ondor'?'Өндөр':a.priority==='dundaj'?'Дундаж':'Нам')+'</span></td><td>'+(a.assigned_to_name||'—')+'</td><td>'+(a.status==='hiisen'?'✅ Хийсэн':a.status==='tsutslasan'?'❌ Цуцлагдсан':'⏳ Хийгдэх')+'</td><td style="display:flex;gap:4px"><button class="btn btn-outline btn-sm" onclick="doneAjil('+a.id+')">✅</button><button class="btn btn-danger btn-sm" onclick="deleteAjil('+a.id+')">🗑</button></td></tr>').join(''):
-    '<tr><td colspan="6" class="empty" style="padding:40px"><div class="empty-icon">📅</div><div class="empty-text">Ажил байхгүй</div></td></tr>') +
-    '</tbody></table></div>';
+  const tabs = [['calendar','Хуанли'],['list','Жагсаалт'],['board','Карт']];
+  mc.innerHTML =
+    '<div style="display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--gray-l)">' +
+      tabs.map(([k,label]) => '<button onclick="switchAjilTab(\''+k+'\')" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;border-bottom:2px solid '+(ajilState.tab===k?'var(--amber-d)':'transparent')+';color:'+(ajilState.tab===k?'var(--amber-d)':'#888')+'">'+label+'</button>').join('') +
+    '</div>' +
+    '<div id="ajil-tab-content"></div>';
+  renderAjilTabContent();
 }
 
-function openAjilModal() {
-  showQuick('Шинэ ажил',
-    '<div class="form-group"><label class="form-label">Ажлын нэр <span class="req">*</span></label><input type="text" class="form-control" id="q-a-name"></div>' +
-    '<div class="form-grid" style="margin-top:10px"><div class="form-group"><label class="form-label">Огноо</label><input type="date" class="form-control" id="q-a-date"></div><div class="form-group"><label class="form-label">Цаг</label><input type="time" class="form-control" id="q-a-time"></div></div>' +
-    '<div class="form-grid" style="margin-top:10px"><div class="form-group"><label class="form-label">Давталт</label><select class="form-control" id="q-a-davt"><option value="once">Ганц удаа</option><option value="odor_buri">Өдөр бүр</option><option value="7_hodood">7 хоногт</option><option value="sar_buri">Сар бүр</option><option value="jil_buri">Жил бүр</option></select></div><div class="form-group"><label class="form-label">Эрэмбэ</label><select class="form-control" id="q-a-er"><option value="nam">Нам</option><option value="dundaj" selected>Дундаж</option><option value="ondor">Өндөр</option></select></div></div>' +
-    '<div class="form-group" style="margin-top:10px"><label class="form-label">Тайлбар</label><textarea class="form-control" id="q-a-tail" rows="2"></textarea></div>',
-  saveAjil);
+function switchAjilTab(tab) {
+  ajilState.tab = tab;
+  renderAjil();
 }
 
-async function saveAjil() {
-  const name = document.getElementById('q-a-name')?.value?.trim();
-  if (!name) { notify('Нэр оруулна уу!','err'); return; }
-  await api('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,date:document.getElementById('q-a-date')?.value||null,time:document.getElementById('q-a-time')?.value||null,repeat:document.getElementById('q-a-davt')?.value,priority:document.getElementById('q-a-er')?.value,notes:document.getElementById('q-a-tail')?.value})});
-  closeQuick(); notify('Ажил нэмэгдлээ!'); renderAjil(); loadStats();
+function renderAjilTabContent() {
+  if (ajilState.tab === 'calendar') renderAjilCalendar();
+  else if (ajilState.tab === 'board') renderAjilBoard();
+  else renderAjilList();
 }
 
-async function doneAjil(id) {
-  const fd = new FormData(); fd.append('status','hiisen');
-  await fetch('/api/tasks/'+id+'/status',{method:'PUT',body:fd});
-  notify('Хийсэн гэж тэмдэглэгдлээ!'); renderAjil(); loadStats();
+async function renderAjilCalendar() {
+  const el = document.getElementById('ajil-tab-content');
+  if (!el) return;
+  const [y,m] = ajilState.month.split('-').map(Number);
+  const data = await api('/api/tasks?month='+ajilState.month+'&limit=500');
+  const byDate = {};
+  data.forEach(t => { (byDate[t.scheduled_date]=byDate[t.scheduled_date]||[]).push(t); });
+  const startWeekday = (new Date(y, m-1, 1).getDay()+6)%7; // Monday=0
+  const daysInMonth = new Date(y, m, 0).getDate();
+  let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+    '<button class="btn btn-outline btn-sm" onclick="ajilMonthShift(-1)">←</button>' +
+    '<div style="font-weight:600;font-size:15px">'+y+' оны '+m+'-р сар</div>' +
+    '<button class="btn btn-outline btn-sm" onclick="ajilMonthShift(1)">→</button>' +
+  '</div>' +
+  '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:11px;color:#888;margin-bottom:4px;text-align:center">' +
+    ajilWeekdays.map(d=>'<div>'+d+'</div>').join('') + '</div>' +
+  '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;min-width:600px">';
+  for (let i=0;i<startWeekday;i++) html += '<div></div>';
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateStr = y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const items = byDate[dateStr]||[];
+    html += '<div style="min-height:74px;border:1px solid var(--gray-l);border-radius:6px;padding:4px;font-size:11px">' +
+      '<div style="font-weight:600;color:#888;margin-bottom:2px">'+d+'</div>' +
+      items.map(t=>'<div onclick="ajilOpenFromCalendar('+t.id+')" style="background:'+t.color+'22;color:'+t.color+';border-radius:4px;padding:2px 4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(t.title||t.task_type_label)+'">'+(t.title||t.task_type_label)+'</div>').join('') +
+    '</div>';
+  }
+  html += '</div>';
+  el.innerHTML = '<div style="overflow-x:auto">'+html+'</div>';
+  window._ajilCalendarData = data;
+}
+
+function ajilOpenFromCalendar(id) {
+  const t = (window._ajilCalendarData||[]).find(x=>x.id===id);
+  if (t) openAjilModal(t);
+}
+
+function ajilMonthShift(delta) {
+  let [y,m] = ajilState.month.split('-').map(Number);
+  m += delta;
+  if (m<1) { m=12; y--; } else if (m>12) { m=1; y++; }
+  ajilState.month = y+'-'+String(m).padStart(2,'0');
+  renderAjilCalendar();
+}
+
+async function renderAjilList() {
+  const el = document.getElementById('ajil-tab-content');
+  if (!el) return;
+  const data = await api('/api/tasks?limit=300'+(ajilState.filterStatus?'&status='+ajilState.filterStatus:''));
+  let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+    '<select class="form-control" style="width:auto" onchange="ajilSetStatusFilter(this.value)">' +
+      '<option value="">Бүх төлөв</option>' +
+      Object.entries({planned:'Төлөвлөсөн',done:'Дууссан',late:'Хоцорсон',cancelled:'Цуцалсан'}).map(([k,v]) =>
+        '<option value="'+k+'"'+(ajilState.filterStatus===k?' selected':'')+'>'+v+'</option>').join('') +
+    '</select></div>';
+  window._ajilListData = data;
+  if (!data.length) { html += '<div class="empty" style="padding:40px"><div class="empty-icon">📅</div><div class="empty-text">Ажил байхгүй</div></div>'; el.innerHTML = html; return; }
+  html += '<div class="table-wrap"><table><thead><tr><th>Ажил</th><th>Огноо</th><th>Хариуцагч</th><th>Адуу/Сүрэг</th><th>Статус</th><th></th></tr></thead><tbody>';
+  data.forEach(t => {
+    const target = t.horse_link_type==='herd' ? (t.herd_name||'Сүрэг')
+      : t.horse_link_type==='filter' ? 'Бүх адуу'
+      : (t.horses.map(h=>h.name).join(', ')||'—');
+    const active = (t.status==='planned'||t.status==='late');
+    html += '<tr>' +
+      '<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+t.color+';margin-right:6px"></span>' +
+        '<span style="font-weight:600;cursor:pointer" onclick="ajilOpenFromList('+t.id+')">'+(t.title||t.task_type_label)+'</span>' +
+        '<div class="t-sub">'+t.task_type_label+(t.notes?' — '+t.notes:'')+'</div></td>' +
+      '<td>'+(t.scheduled_date||'—')+'</td>' +
+      '<td>'+(t.assignee||t.external_provider||'—')+'</td>' +
+      '<td>'+target+'</td>' +
+      '<td>'+(ajilStatusLabels[t.status]||t.status)+'</td>' +
+      '<td style="display:flex;gap:4px;white-space:nowrap">' +
+        (active ?
+          '<button class="btn btn-outline btn-sm" onclick="ajilComplete('+t.id+')" title="Дууссан">✅</button>'+
+          '<button class="btn btn-outline btn-sm" onclick="ajilLate('+t.id+')" title="Хоцорсон">⏰</button>'+
+          '<button class="btn btn-outline btn-sm" onclick="ajilCancel('+t.id+')" title="Цуцлах">🚫</button>'
+        : '') +
+        '<button class="btn btn-danger btn-sm" onclick="deleteAjil('+t.id+')">🗑</button>' +
+      '</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+function ajilOpenFromList(id) {
+  const t = (window._ajilListData||[]).find(x=>x.id===id);
+  if (t) openAjilModal(t);
+}
+
+function ajilSetStatusFilter(v) { ajilState.filterStatus = v; renderAjilList(); }
+
+const ajilBoardColumns = [
+  ['planned','Төлөвлөсөн','#378ADD'],
+  ['done','Дууссан','#1D9E75'],
+  ['late','Хоцорсон','#EF9F27'],
+  ['cancelled','Цуцалсан','#D4537E'],
+];
+
+async function renderAjilBoard() {
+  const el = document.getElementById('ajil-tab-content');
+  if (!el) return;
+  const data = await api('/api/tasks?limit=300');
+  window._ajilBoardData = data;
+  let html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;min-width:1000px">';
+  ajilBoardColumns.forEach(([status,label,color]) => {
+    const items = data.filter(t=>t.status===status)
+      .sort((a,b)=>(b.scheduled_date||'').localeCompare(a.scheduled_date||''));
+    html += '<div>' +
+      '<div style="font-weight:700;font-size:13px;color:'+color+';margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">' +
+        '<span>'+label+'</span>' +
+        '<span style="background:'+color+'22;color:'+color+';border-radius:10px;padding:1px 8px;font-size:11px">'+items.length+'</span>' +
+      '</div>' +
+      '<div class="ajil-board-col" data-status="'+status+'" ondragover="ajilColDragOver(event)" ondragleave="ajilColDragLeave(event)" ondrop="ajilColDrop(event,\''+status+'\')" style="display:flex;flex-direction:column;gap:8px;min-height:60px;background:var(--gray-l);border-radius:8px;padding:8px;transition:background 0.15s">';
+    if (!items.length) {
+      html += '<div style="color:#aaa;text-align:center;font-size:11px;padding:16px;pointer-events:none">—</div>';
+    } else {
+      items.forEach(t => {
+        const target = t.horse_link_type==='herd' ? (t.herd_name||'Сүрэг')
+          : t.horse_link_type==='filter' ? 'Бүх адуу'
+          : ((t.horses||[]).map(h=>h.name).join(', ')||'—');
+        const isRecurring = t.recurrence && t.recurrence !== 'none';
+        let actions = '';
+        if (status === 'planned') {
+          actions = '<button class="btn btn-outline btn-sm" onclick="ajilComplete('+t.id+')" title="Дууссан">✅</button>'+
+            '<button class="btn btn-outline btn-sm" onclick="ajilLate('+t.id+')" title="Хоцорсон">⏰</button>'+
+            '<button class="btn btn-outline btn-sm" onclick="ajilCancel('+t.id+')" title="Цуцлах">🚫</button>';
+        } else if (status === 'late') {
+          actions = '<button class="btn btn-outline btn-sm" onclick="ajilComplete('+t.id+')" title="Дууссан">✅</button>'+
+            '<button class="btn btn-outline btn-sm" onclick="ajilCancel('+t.id+')" title="Цуцлах">🚫</button>';
+        }
+        html += '<div class="ajil-card" draggable="true" ondragstart="ajilDragStart(event,'+t.id+')" ondragend="ajilDragEnd(event)" style="background:#fff;border-radius:8px;padding:10px;box-shadow:0 1px 2px rgba(0,0,0,0.05);cursor:grab" onclick="ajilOpenFromBoard('+t.id+')">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;margin-bottom:6px">' +
+            '<span style="background:'+t.color+'22;color:'+t.color+';padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">'+t.task_type_label+'</span>' +
+            (isRecurring ? '<span title="Давтагдах ажил" style="font-size:13px">🔁</span>' : '') +
+          '</div>' +
+          '<div style="font-weight:600;font-size:13px;margin-bottom:4px">'+(t.title||t.task_type_label)+'</div>' +
+          '<div style="font-size:11px;color:var(--text-s);margin-bottom:2px">📅 '+(t.scheduled_date||'—')+'</div>' +
+          '<div style="font-size:11px;color:var(--text-s);margin-bottom:2px">👤 '+(t.assignee||t.external_provider||'—')+'</div>' +
+          '<div style="font-size:11px;color:var(--text-s)">🐴 '+target+'</div>' +
+          (actions ? '<div style="display:flex;gap:4px;margin-top:8px" onclick="event.stopPropagation()">'+actions+'</div>' : '') +
+        '</div>';
+      });
+    }
+    html += '</div></div>';
+  });
+  html += '</div>';
+  el.innerHTML = '<div style="overflow-x:auto">'+html+'</div>';
+}
+
+function ajilOpenFromBoard(id) {
+  const t = (window._ajilBoardData||[]).find(x=>x.id===id);
+  if (t) openAjilModal(t);
+}
+
+let _ajilDragId = null;
+
+function ajilDragStart(ev, taskId) {
+  _ajilDragId = taskId;
+  ev.dataTransfer.effectAllowed = 'move';
+  try { ev.dataTransfer.setData('text/plain', String(taskId)); } catch(e) {}
+  const card = ev.target.closest('.ajil-card');
+  if (card) card.style.opacity = '0.35';
+}
+
+function ajilDragEnd(ev) {
+  const card = ev.target.closest('.ajil-card');
+  if (card) card.style.opacity = '1';
+  document.querySelectorAll('.ajil-board-col').forEach(c => c.style.background = 'var(--gray-l)');
+  _ajilDragId = null;
+}
+
+function ajilColDragOver(ev) {
+  ev.preventDefault();
+  ev.currentTarget.style.background = 'var(--amber-l)';
+}
+
+function ajilColDragLeave(ev) {
+  ev.currentTarget.style.background = 'var(--gray-l)';
+}
+
+async function ajilColDrop(ev, targetStatus) {
+  ev.preventDefault();
+  ev.currentTarget.style.background = 'var(--gray-l)';
+  const taskId = _ajilDragId;
+  _ajilDragId = null;
+  if (!taskId) return;
+  const task = (window._ajilBoardData||[]).find(x=>x.id===taskId);
+  if (!task || task.status === targetStatus) return;
+  if (targetStatus === 'done') await ajilComplete(taskId);
+  else if (targetStatus === 'late') await ajilLate(taskId);
+  else if (targetStatus === 'cancelled') await ajilCancel(taskId);
+  else notify('Энэ төлөв рүү чирж шилжүүлэх боломжгүй','err');
+}
+
+async function ajilLinkTypeChange(linkType, task) {
+  const el = document.getElementById('q-aj-link-detail');
+  if (!el) return;
+  if (linkType === 'herd') {
+    el.innerHTML = '<div class="form-group"><label class="form-label">Сүрэг</label><select class="form-control" id="q-aj-herd">'+herdOptions(task?task.herd_id:null)+'</select></div>';
+  } else if (linkType === 'specific') {
+    el.innerHTML = '<div class="form-group"><label class="form-label">Адуу сонгох (Ctrl/Cmd дарж олныг сонгоно)</label><select class="form-control" id="q-aj-horses" multiple style="height:120px"><option>Уншиж байна...</option></select></div>';
+    const horses = await api('/api/horses?limit=1000');
+    const selected = new Set((task&&task.horses||[]).map(h=>h.id));
+    const sel = document.getElementById('q-aj-horses');
+    if (sel) sel.innerHTML = horses.data.map(h=>'<option value="'+h.id+'"'+(selected.has(h.id)?' selected':'')+'>'+h.name+'</option>').join('');
+  } else {
+    el.innerHTML = '<div style="color:#888;font-size:12px;padding:8px 0">Бүртгэлтэй бүх амьд адуунд хамаарна.</div>';
+  }
+}
+
+async function openAjilModal(task) {
+  const linkType = task ? (task.horse_link_type||'specific') : 'specific';
+  const esc = (s) => (s||'').replace(/"/g,'&quot;');
+  showQuick(task?'Ажил засах':'Шинэ ажил',
+    '<div class="form-grid">' +
+      '<div class="form-group"><label class="form-label">Ажлын төрөл</label><select class="form-control" id="q-aj-type">' +
+        Object.entries(TASK_TYPES_FE).map(([k,v])=>'<option value="'+k+'"'+(task&&task.task_type===k?' selected':'')+'>'+v+'</option>').join('') +
+      '</select></div>' +
+      '<div class="form-group"><label class="form-label">Гарчиг</label><input type="text" class="form-control" id="q-aj-title" value="'+esc(task&&task.title)+'"></div>' +
+    '</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-group"><label class="form-label">Огноо</label><input type="date" class="form-control" id="q-aj-date" value="'+(task?task.scheduled_date:new Date().toISOString().split('T')[0])+'"></div>' +
+      '<div class="form-group"><label class="form-label">Давталт</label><select class="form-control" id="q-aj-rec">' +
+        Object.entries(ajilRecLabels).map(([k,v])=>'<option value="'+k+'"'+(task&&task.recurrence===k?' selected':'')+'>'+v+'</option>').join('') +
+      '</select></div>' +
+    '</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-group"><label class="form-label">Хариуцагч</label><input type="text" class="form-control" id="q-aj-assignee" value="'+esc(task&&task.assignee)+'"></div>' +
+      '<div class="form-group"><label class="form-label">Гадны үйлчилгээ</label><input type="text" class="form-control" id="q-aj-provider" placeholder="Малын эмч, тахчин..." value="'+esc(task&&task.external_provider)+'"></div>' +
+    '</div>' +
+    '<div class="form-group"><label class="form-label">Хамаарах адуу</label><select class="form-control" id="q-aj-link" onchange="ajilLinkTypeChange(this.value)">' +
+      '<option value="specific"'+(linkType==='specific'?' selected':'')+'>Тодорхой адуу</option>' +
+      '<option value="herd"'+(linkType==='herd'?' selected':'')+'>Сүрэг</option>' +
+      '<option value="filter"'+(linkType==='filter'?' selected':'')+'>Бүх адуу</option>' +
+    '</select></div>' +
+    '<div id="q-aj-link-detail"></div>' +
+    '<div class="form-group"><label class="form-label">Тэмдэглэл</label><textarea class="form-control" id="q-aj-notes" rows="2">'+(task&&task.notes?task.notes:'')+'</textarea></div>',
+  () => saveAjil(task?task.id:null));
+  await ajilLinkTypeChange(linkType, task);
+}
+
+async function saveAjil(taskId) {
+  const scheduled_date = document.getElementById('q-aj-date')?.value;
+  if (!scheduled_date) { notify('Огноо оруулна уу!','err'); return; }
+  const linkType = document.getElementById('q-aj-link')?.value;
+  const body = {
+    task_type: document.getElementById('q-aj-type')?.value,
+    title: document.getElementById('q-aj-title')?.value?.trim()||null,
+    scheduled_date,
+    assignee: document.getElementById('q-aj-assignee')?.value?.trim()||null,
+    external_provider: document.getElementById('q-aj-provider')?.value?.trim()||null,
+    recurrence: document.getElementById('q-aj-rec')?.value||'none',
+    notes: document.getElementById('q-aj-notes')?.value?.trim()||null,
+    horse_link_type: linkType,
+  };
+  if (linkType === 'herd') {
+    body.herd_id = parseInt(document.getElementById('q-aj-herd')?.value)||null;
+  } else if (linkType === 'specific') {
+    const sel = document.getElementById('q-aj-horses');
+    body.horse_ids = sel ? Array.from(sel.selectedOptions).map(o=>parseInt(o.value)) : [];
+  } else {
+    body.filter_json = '{}';
+  }
+  if (taskId) {
+    await api('/api/tasks/'+taskId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  } else {
+    await api('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  }
+  closeQuick(); notify(taskId?'Шинэчлэгдлээ!':'Ажил нэмэгдлээ!'); renderAjilTabContent(); loadStats();
+}
+
+async function ajilComplete(id) {
+  const notes = prompt('Тэмдэглэл (заавал биш):','');
+  if (notes===null) return;
+  await api('/api/tasks/'+id+'/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({completion_notes:notes||null})});
+  notify('Дууссан гэж тэмдэглэгдлээ!'); renderAjilTabContent(); loadStats();
+}
+
+async function ajilLate(id) {
+  const reason = prompt('Хоцорсон шалтгаан:','');
+  if (reason===null) return;
+  const newDate = prompt('Шинэ огноо (YYYY-MM-DD), хоосон бол шинэ ажил үүсэхгүй:','');
+  if (newDate===null) return;
+  await api('/api/tasks/'+id+'/late',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:reason||null,new_date:newDate||null})});
+  notify('Хоцорсон гэж тэмдэглэгдлээ!'); renderAjilTabContent(); loadStats();
+}
+
+async function ajilCancel(id) {
+  const reason = prompt('Цуцлах шалтгаан:','');
+  if (reason===null) return;
+  await api('/api/tasks/'+id+'/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:reason||null})});
+  notify('Цуцлагдлаа!'); renderAjilTabContent(); loadStats();
 }
 
 async function deleteAjil(id) {
   if (!confirm('Устгах уу?')) return;
   await api('/api/tasks/'+id,{method:'DELETE'});
-  notify('Устгагдлаа!'); renderAjil(); loadStats();
+  notify('Устгагдлаа!'); renderAjilTabContent(); loadStats();
 }
 
 // ── СҮНГАА ──
@@ -5392,7 +5878,7 @@ async function renderSungaa() {
       t += '<tr style="border-bottom:1px solid var(--gray-l)" onmouseover="this.style.background=\'var(--gray-ll)\'" onmouseout="this.style.background=\'\'">';
       t += '<td style="padding:9px 10px;color:#888;font-size:11px;white-space:nowrap;vertical-align:top">'+(s.date||'—')+'</td>';
       t += '<td style="padding:9px 10px;vertical-align:top">';
-      t += '<div style="font-size:13px;font-weight:600;color:#854F0B;cursor:pointer" onclick="openDetail('+s.horse_id+');setTimeout(function(){switchDetailTab(4)},300)">'+horseNer(s.horse_name,s.horse_birth_date,s.horse_sex,s.horse_gelded)+'</div>';
+      t += '<div style="font-size:13px;font-weight:600;color:#854F0B;cursor:pointer" onclick="openDetail('+s.horse_id+');setTimeout(function(){switchDetailTab(1)},300)">'+horseNer(s.horse_name,s.horse_birth_date,s.horse_sex,s.horse_gelded)+'</div>';
       t += '<div style="font-size:11px;color:#aaa;margin-top:2px">'+sub+'</div>';
       t += '</td>';
       t += '<td style="padding:9px 10px;font-size:11px;color:#888;vertical-align:top;white-space:nowrap">'+(s.horse_sys_id||'—')+'</td>';
@@ -5669,8 +6155,8 @@ async function deleteSungaa(id, horse_id) {
 async function refreshDetailSungaaTab(horse_id) {
   const h = await api('/api/horses/'+horse_id);
   window._currentDetailData = h;
-  // Tab 1 (Сүнгаа) контентыг шинэчлэх
-  const tabEl = document.querySelector('[data-tab-content="1"]');
+  // Амжилт табын Сүнгаа контентыг шинэчлэх
+  const tabEl = document.getElementById('detail-race-content');
   if (!tabEl) return;
   const medall = {1:'🥇',2:'🥈',3:'🥈',4:'🥉',5:'🥉'};
   const practiceRaceList = h.practice_race||[];
@@ -6106,7 +6592,17 @@ async function delConfig(id, name) {
   api('/api/training_sessions/types').then(function(t){ window._soikhTurluud=t||[]; });
 }
 
-function renderAduuForm() { showPage('horse'); openAduuModal(); }
+function renderAduuForm() {
+  const mc = document.getElementById('main-content');
+  mc.innerHTML = '<div class="tabs" id="horse-add-tabs" style="align-items:center;gap:10px">' +
+    '<button class="btn btn-primary" style="margin-bottom:6px" onclick="openAduuModal()">➕ Шинэ адуу бүртгэх</button>' +
+    '<div class="tab" onclick="this.classList.add(\'active\');restoreHorseModal();renderHialbar()"># Хялбар нэмэх (Удам)</div>' +
+    '</div><div id="horse-add-content">' +
+    '<p style="font-size:12px;color:var(--text-s);margin-bottom:14px;max-width:600px">Адууны бүх мэдээллийг (нэр, удам, эзэмшигч, малчин, сүрэг, зүчээ г.м.) доорх форм ашиглан бүртгээрэй.</p>' +
+    '<div id="inline-horse-form-slot"></div>' +
+    '</div>';
+  openAduuModal();
+}
 
 // ── QUICK MODAL ──
 let quickSaveFn = null;
@@ -6524,10 +7020,11 @@ const TSOL_OPTIONS = Object.entries(TSOL_LBL).map(([v,l])=>`<option value="${v}"
 let trainerList = [];
 
 async function renderUyaach() {
-  const el = document.getElementById('main-content');
+  const el = document.getElementById('surg-subtab-content') || document.getElementById('main-content');
   el.innerHTML = '<div class="loading"><div class="spinner"></div><br>Уншиж байна...</div>';
   trainerList = await api('/api/trainers');
-  document.getElementById('nb-trainer').textContent = trainerList.length;
+  const nbT = document.getElementById('nb-trainer');
+  if (nbT) nbT.textContent = trainerList.length;
   if (!trainerList.length) {
     el.innerHTML = '<div class="empty-state"><div style="font-size:48px">🤠</div><div>Уяач бүртгэгдээгүй байна</div><button class="btn btn-primary" onclick="openUyaachModal()">➕ Уяач нэмэх</button></div>';
     return;
