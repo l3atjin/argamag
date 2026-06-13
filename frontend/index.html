@@ -410,7 +410,7 @@ textarea.form-control{resize:vertical;min-height:60px}
         </div>
         <div class="form-group">
           <label class="form-label">Угшил</label>
-          <div class="input-add"><select class="form-control" id="f-breed_text"></select><button class="btn-icon" onclick="addConfig('breed_text','f-breed_text')">＋</button></div>
+          <div class="input-add"><select class="form-control" id="f-breed_text"></select><button class="btn-icon" onclick="addConfig('breed','f-breed_text')">＋</button></div>
         </div>
         <div class="form-group">
           <label class="form-label">Гарал</label>
@@ -1018,7 +1018,7 @@ async function renderAduu(reset=false) {
   if (existingSB) existingSB.remove();
   if (!document.getElementById('search-box')) {
     // Dropdown options
-    const ugOpts = '<option value="">— Бүгд —</option>' + (configs['breed_text']||[]).map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('');
+    const ugOpts = '<option value="">— Бүгд —</option>' + (configs['breed']||[]).map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('');
     const zuOpts = '<option value="">— Бүгд —</option>' + (configs['color']||[]).map(c=>'<option value="'+c.id+'">'+c.name+'</option>').join('');
     const suOpts = '<option value="">— Бүгд —</option>' + herdList.map(s=>'<option value="'+s.id+'">'+s.name+'</option>').join('');
     const ezOpts = '<option value="">— Бүгд —</option>' + contactList.filter(h=>h.type==='owner_text').map(h=>'<option value="'+h.id+'">'+h.name+'</option>').join('');
@@ -4745,7 +4745,7 @@ async function openAduuModal(id=null) {
   ownerTextRows = [];
   document.getElementById('horse-modal-title').textContent = id?'Адуу засах':'Шинэ адуу бүртгэх';
   document.getElementById('f-id').value = id||'';
-  document.getElementById('f-breed_text').innerHTML = configOptions('breed_text');
+  document.getElementById('f-breed_text').innerHTML = configOptions('breed');
   document.getElementById('f-garal').innerHTML = configOptions('origin');
   document.getElementById('f-herd').innerHTML = herdOptions();
   document.getElementById('f-zus').innerHTML = configOptions('color');
@@ -4996,7 +4996,7 @@ async function openParentSubForm(type) {
   await loadConfigs();
   const lbl = type==='eceg' ? 'Эцэг азарга нэмэх' : 'Эх гүү нэмэх';
   const sexVal = type==='eceg' ? 'stallion' : 'mare';
-  const breedTextOpts = configOptions('breed_text');
+  const breedTextOpts = configOptions('breed');
   const garalOpts = configOptions('origin');
   const zusOpts = configOptions('color');
   const html = '<div class="form-grid">' +
@@ -5033,7 +5033,7 @@ async function openParentSubForm(type) {
   setTimeout(()=>{
     const a = document.getElementById('psub-breed_text-add');
     if(a) {
-      a.onclick=()=>addConfig('breed_text','psub-breed_text');
+      a.onclick=()=>addConfig('breed','psub-breed_text');
       document.getElementById('psub-garal-add').onclick=()=>addConfig('origin','psub-garal');
       document.getElementById('psub-zus-add').onclick=()=>addConfig('color','psub-zus');
     }
@@ -5138,7 +5138,7 @@ let pedigreeParentTimer = null;
 async function renderHialbar() {
   await loadConfigs();
   const mc = document.getElementById('horse-add-content') || document.getElementById('main-content');
-  const breedTextOpts = configOptions('breed_text');
+  const breedTextOpts = configOptions('breed');
   const garalOpts  = configOptions('origin');
   const zusOpts    = configOptions('color');
 
@@ -5199,7 +5199,7 @@ async function renderHialbar() {
       mc.appendChild(wrap);
 
   // DOM бэлэн болсны дараа event-үүд холбох
-  document.getElementById('h-breed_text-add').onclick = () => addConfig('breed_text','h-breed_text');
+  document.getElementById('h-breed_text-add').onclick = () => addConfig('breed','h-breed_text');
   document.getElementById('h-garal-add').onclick  = () => addConfig('origin','h-garal');
   document.getElementById('h-zus-add').onclick    = () => addConfig('color','h-zus');
   document.getElementById('h-eceg-h').oninput     = function(){ searchHialbarParent('eceg', this.value); };
@@ -5266,7 +5266,7 @@ async function openHialbarSubForm(type) {
     '<option value="gelding">Морины</option></select></div>' +
     '<div class="form-group"><label class="form-label">Төрсөн он</label><input type="text" class="form-control" id="hsub-birth_date" placeholder="2015" maxlength="4"></div>' +
     '<div class="form-group full"><label class="form-label">№</label><input type="text" class="form-control" id="hsub-number"></div>' +
-    '<div class="form-group full"><label class="form-label">Угшил</label><div class="input-add"><select class="form-control" id="hsub-breed_text">'+configOptions('breed_text')+'</select><button class="btn-icon" id="hsub-breed_text-add">＋</button></div></div>' +
+    '<div class="form-group full"><label class="form-label">Угшил</label><div class="input-add"><select class="form-control" id="hsub-breed_text">'+configOptions('breed')+'</select><button class="btn-icon" id="hsub-breed_text-add">＋</button></div></div>' +
     '<div class="form-group full"><label class="form-label">Гарал</label><div class="input-add"><select class="form-control" id="hsub-garal">'+configOptions('origin')+'</select><button class="btn-icon" id="hsub-garal-add">＋</button></div></div>' +
     '<div class="form-group full"><label class="form-label">Зүс</label><div class="input-add"><select class="form-control" id="hsub-zus">'+configOptions('color')+'</select><button class="btn-icon" id="hsub-zus-add">＋</button></div></div>' +
     '</div>';
@@ -5288,7 +5288,7 @@ async function openHialbarSubForm(type) {
   });
   setTimeout(()=>{
     const a = document.getElementById('hsub-breed_text-add');
-    if(a) { a.onclick=()=>addConfig('breed_text','hsub-breed_text');
+    if(a) { a.onclick=()=>addConfig('breed','hsub-breed_text');
       document.getElementById('hsub-garal-add').onclick=()=>addConfig('origin','hsub-garal');
       document.getElementById('hsub-zus-add').onclick=()=>addConfig('color','hsub-zus'); }
   },100);
@@ -6278,7 +6278,7 @@ async function renderTohiruulga() {
   ]);
   const groups = {};
   all.forEach(c=>{if(!groups[c.type])groups[c.type]=[];groups[c.type].push(c);});
-  const labels = {breed_text:'Угшил',garal:'Гарал',zus:'Зүс',body_marking:'Содон тэмдэг — Бие',head_marking:'Содон тэмдэг — Толгой',leg_marking:'Содон тэмдэг — Хөл',race_type:'Уралдааны төрөл',vacsin:'Вакцин',hunsuu:'Хоол хүнс',measurement:'Хэмжилтийн төрөл',jockey:'Унаач',soikh_type:'🏃 Морь сойхын ажлын төрөл',brand:'🔖 Тамга'};
+  const labels = {breed:'Угшил',origin:'Гарал',color:'Зүс',body_marking:'Содон тэмдэг — Бие',head_marking:'Содон тэмдэг — Толгой',leg_marking:'Содон тэмдэг — Хөл',race_type:'Уралдааны төрөл',vacsin:'Вакцин',hunsuu:'Хоол хүнс',measurement:'Хэмжилтийн төрөл',jockey:'Унаач',training_type:'🏃 Морь сойхын ажлын төрөл',brand:'🔖 Тамга'};
   const mc = document.getElementById('main-content');
 
   function makeCard(type, lbl, items, addFn) {
@@ -6443,7 +6443,7 @@ async function openUdamModal(id=null) {
     '<div class="form-group"><label class="form-label">Хүйс</label><select class="form-control" id="um-sex"><option value="">—</option><option value="stallion">Эр</option><option value="mare">Охин</option></select></div>' +
     '<div class="form-group"><label class="form-label">Төрсөн он</label><select class="form-control" id="um-birth_date"><option value="">— Он —</option><option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option><option value="2021">2021</option><option value="2020">2020</option><option value="2019">2019</option><option value="2018">2018</option><option value="2017">2017</option><option value="2016">2016</option><option value="2015">2015</option><option value="2014">2014</option><option value="2013">2013</option><option value="2012">2012</option><option value="2011">2011</option><option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option><option value="2006">2006</option><option value="2005">2005</option><option value="2004">2004</option><option value="2003">2003</option><option value="2002">2002</option><option value="2001">2001</option><option value="2000">2000</option><option value="1999">1999</option><option value="1998">1998</option><option value="1997">1997</option><option value="1996">1996</option><option value="1995">1995</option><option value="1994">1994</option><option value="1993">1993</option><option value="1992">1992</option><option value="1991">1991</option><option value="1990">1990</option><option value="1989">1989</option><option value="1988">1988</option><option value="1987">1987</option><option value="1986">1986</option><option value="1985">1985</option><option value="1984">1984</option><option value="1983">1983</option><option value="1982">1982</option><option value="1981">1981</option><option value="1980">1980</option><option value="1979">1979</option><option value="1978">1978</option><option value="1977">1977</option><option value="1976">1976</option><option value="1975">1975</option><option value="1974">1974</option><option value="1973">1973</option><option value="1972">1972</option><option value="1971">1971</option><option value="1970">1970</option></select></div>' +
     '<div class="form-group full"><label class="form-label">№</label><input type="text" class="form-control" id="um-number"></div>' +
-    '<div class="form-group"><label class="form-label">Угшил</label><div class="input-add"><select class="form-control" id="um-breed_text">'+configOptions('breed_text')+'</select><button class="btn-icon" id="um-breed_text-add">＋</button></div></div>' +
+    '<div class="form-group"><label class="form-label">Угшил</label><div class="input-add"><select class="form-control" id="um-breed_text">'+configOptions('breed')+'</select><button class="btn-icon" id="um-breed_text-add">＋</button></div></div>' +
     '<div class="form-group"><label class="form-label">Гарал</label><div class="input-add"><select class="form-control" id="um-garal">'+configOptions('origin')+'</select><button class="btn-icon" id="um-garal-add">＋</button></div></div>' +
     '<div class="form-group full"><label class="form-label">Зүс</label><div class="input-add"><select class="form-control" id="um-zus">'+configOptions('color')+'</select><button class="btn-icon" id="um-zus-add">＋</button></div></div>' +
     '<div class="form-group full"><label class="form-label">♂ Эцэг азарга</label><div style="display:flex;gap:6px"><input type="text" class="form-control" id="um-eceg-h" placeholder="Нэрээр хайх..."><button class="btn btn-outline btn-sm" id="um-eceg-clr">✕</button></div><div id="um-eceg-r" style="margin-top:4px"></div><input type="hidden" id="um-eceg-id"><div id="um-eceg-sel" style="margin-top:3px;font-size:11px;color:#1A56A8;font-weight:600"></div></div>' +
@@ -6451,7 +6451,7 @@ async function openUdamModal(id=null) {
     '</div>';
   showQuick(lbl, html, saveUdamModal);
   setTimeout(async () => {
-    document.getElementById('um-breed_text-add').onclick = ()=>addConfig('breed_text','um-breed_text');
+    document.getElementById('um-breed_text-add').onclick = ()=>addConfig('breed','um-breed_text');
     document.getElementById('um-garal-add').onclick  = ()=>addConfig('origin','um-garal');
     document.getElementById('um-zus-add').onclick    = ()=>addConfig('color','um-zus');
     document.getElementById('um-eceg-h').oninput = function(){ searchUdamModalParent('eceg', this.value); };
