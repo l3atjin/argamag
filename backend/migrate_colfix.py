@@ -39,6 +39,15 @@ def main():
     else:
         print("hoof_care: neither next_date nor legacy column found — skip")
 
+    # 3. contact.type 'ezeshigch' -> 'owner_text'
+    # Owners were left with the legacy Mongolian-Latin type value; the app filters
+    # owner pickers on type='owner_text', so existing owners were unselectable.
+    n = conn.execute("UPDATE contact SET type='owner_text' WHERE type='ezeshigch'").rowcount
+    if n:
+        changed.append(f"contact.type ezeshigch -> owner_text ({n} rows)")
+    else:
+        print("contact.type: no 'ezeshigch' rows — skip")
+
     conn.commit()
     conn.close()
 
