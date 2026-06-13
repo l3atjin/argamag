@@ -48,6 +48,15 @@ def main():
     else:
         print("contact.type: no 'ezeshigch' rows — skip")
 
+    # 4. horse.status 'pedigree_only' -> 'pedigree'
+    # The pedigree-placeholder feature creates/queries status='pedigree'; stray
+    # 'pedigree_only' rows are orphaned (invisible to the pedigree tool).
+    n = conn.execute("UPDATE horse SET status='pedigree' WHERE status='pedigree_only'").rowcount
+    if n:
+        changed.append(f"horse.status pedigree_only -> pedigree ({n} rows)")
+    else:
+        print("horse.status: no 'pedigree_only' rows — skip")
+
     conn.commit()
     conn.close()
 
