@@ -4852,12 +4852,21 @@ async function openAduuModal(id=null) {
   const hModal = document.getElementById('horse-modal');
   const hCard = document.getElementById('horse-modal-title').closest('.modal');
   if (currentPageName === 'horse-nemeh') {
-    const slot = document.getElementById('inline-horse-form-slot');
+    let slot = document.getElementById('inline-horse-form-slot');
+    if (!slot) {
+      // "Хялбар нэмэх" таб horse-add-content-ийг дарж slot-ийг устгасан тул дахин үүсгэнэ
+      const hac = document.getElementById('horse-add-content');
+      if (hac) {
+        hac.innerHTML = '<p style="font-size:12px;color:var(--text-s);margin-bottom:14px;max-width:600px">Адууны бүх мэдээллийг (нэр, удам, эзэмшигч, малчин, сүрэг, зүчээ г.м.) доорх форм ашиглан бүртгээрэй.</p><div id="inline-horse-form-slot"></div>';
+        slot = document.getElementById('inline-horse-form-slot');
+      }
+    }
     if (slot) {
       hCard.classList.add('modal-inline');
       slot.appendChild(hCard);
     }
     hModal.classList.remove('open');
+    document.querySelectorAll('#horse-add-tabs .tab').forEach(t=>t.classList.remove('active'));
   } else {
     if (hCard.parentElement !== hModal) hModal.appendChild(hCard);
     hCard.classList.remove('modal-inline');
