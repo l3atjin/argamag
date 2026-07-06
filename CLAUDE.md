@@ -161,8 +161,8 @@ pregnancy_check:  #639922  /* гүн ногоон */
 ```
 
 ## Одоо байгаа алдаанууд
-- [ ] Pedigree endpoint 500 error — `horse_id` биш `registration_code` ашиглах ёстой
-- [ ] GitHub-д push хийгдээгүй (l3atjin акаунтын PAT хэрэгтэй)
+- [x] ~~Pedigree endpoint 500 error~~ — зассан: `/api/horses/{id}/pedigree` нь `id: int` авч `registration_code AS horse_id` alias-тай зөв ажиллаж байна
+- [x] ~~GitHub-д push хийгдээгүй~~ — remote-той синк болсон (origin/main)
 
 ## Ирээдүйн төлөвлөгөө
 1. 🔧 Арчилгааны хуваарь модуль (одоо хийж байгаа)
