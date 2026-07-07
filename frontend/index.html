@@ -1114,6 +1114,9 @@ async function renderAduu(reset=false) {
     searchableDropdown('s-zus', {placeholder:'Зүс хайх...'});
     // Фаз 2: сүрэг шүүлт
     searchableDropdown('s-herd', {placeholder:'Сүрэг хайх...'});
+    // Фаз 3: эзэмшигч/малчин шүүлт
+    searchableDropdown('s-owner_text', {placeholder:'Эзэмшигч хайх...'});
+    searchableDropdown('s-malchin', {placeholder:'Малчин хайх...'});
   }
 
   fetchAduuTable();
@@ -4791,6 +4794,7 @@ async function openAduuModal(id=null) {
   document.getElementById('f-tolgoi').innerHTML = configOptions('head_marking');
   document.getElementById('f-hel').innerHTML = configOptions('leg_marking');
   document.getElementById('f-malchin').innerHTML = contactOptions('malchin');
+  searchableDropdown('f-malchin', {placeholder:'Малчин хайх...'});
   document.getElementById('f-stable').innerHTML = stableOptions();
   document.getElementById('f-brand').innerHTML = configOptions('brand');
   // Аймаг/Сум dropdown
@@ -4872,6 +4876,7 @@ async function openAduuModal(id=null) {
     const bhEl = document.getElementById('f-location');
     if (bhEl) bhEl.value = h.location||'';
     document.getElementById('f-malchin').value = h.herder_id||'';
+    document.getElementById('f-malchin')._sdSync && document.getElementById('f-malchin')._sdSync();
     document.getElementById('f-notes').value = h.notes||'';
   if(document.getElementById('f-important')) document.getElementById('f-important').checked = !!h.important;
     // personal_note хасагдсан
