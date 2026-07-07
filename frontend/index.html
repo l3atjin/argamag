@@ -4991,14 +4991,14 @@ function initHorseFormTypeaheads() {
   bindTypeahead(
     document.getElementById('f-zus-search'), document.getElementById('f-zus'), document.getElementById('f-zus-results'),
     () => configs['color'] || [],
-    { allowCreate: async (q) => {
+    { showAllOnFocus: true, allowCreate: async (q) => {
         const r = await fetch('/api/options', {method:'POST', body:new URLSearchParams({type:'color', name:q})});
         const data = await r.json(); await loadConfigs(); notify('"'+q+'" зүс нэмэгдлээ!'); return {id:data.id, name:q};
     } });
   bindTypeahead(
     document.getElementById('f-breed_text-search'), document.getElementById('f-breed_text'), document.getElementById('f-breed_text-results'),
     () => configs['breed'] || [],
-    { allowCreate: async (q) => {
+    { showAllOnFocus: true, allowCreate: async (q) => {
         const r = await fetch('/api/options', {method:'POST', body:new URLSearchParams({type:'breed', name:q})});
         const data = await r.json(); await loadConfigs(); notify('"'+q+'" угшил нэмэгдлээ!'); return {id:data.id, name:q};
     } });
