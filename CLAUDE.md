@@ -166,11 +166,13 @@ TASK_TYPES = {
 - `MutationObserver` (childList) → option repopulate (`configOptions`/`addConfig`) үед харагдах текстийг дахин тааруулна; prefill-тэй форм (um) дээр prefill-ийн дараа bind хийнэ
 - `select._sd` флаг → давхар bind-аас сэргийлнэ (идемпотент); `select._sdSync()` → гараар resync
 - `opts.showAllOnFocus` default true (dropdown тул focus дээр бүгд харагдана)
-- **Нэгтгэх дараалал** (судалгаанаас): Фаз 1 зүс/угшил ✅ → Фаз 2 сүрэг+уяач ✅ → 3 эзэмшигч → 4 адуу → 5 одоо байгаа pattern (`searchParent`/task picker/`dbDdSearch`) нэгтгэх → 6 аймаг/сум cascade
+- **Нэгтгэх дараалал** (судалгаанаас): Фаз 1 зүс/угшил ✅ → Фаз 2 сүрэг+уяач ✅ → Фаз 3 эзэмшигч ✅ → 4 адуу → 5 одоо байгаа pattern (`searchParent`/task picker/`dbDdSearch`) нэгтгэх → 6 аймаг/сум cascade
 - **Фаз 1 (✅):** `s-zus, s-breed_text, psub-*, hsub-*, h-*, um-*` (zus/breed_text) — 10 select
 - **Фаз 2 (✅):** `s-herd, q-aj-herd, f-trainer-sel, q-sg-trainer, ms-trainer, q-nu-trainer-id` — 6 form-control select
-- **Фаз 2 хойшлуулсан:** `db-butets-herd`, `sf-trainer` (compact custom загвартай filter — searchableDropdown-д compact mode нэмэх хэрэгтэй), `ms-trainer-sel` (onchange нь `renderMoriSoikh()`-оор хуудсыг дахин барьдаг), `eq-trainer` (том засах модал, одоо prefill байхгүй)
-- Локал DOM симуляц (Фаз 1: 7/7, Фаз 2: 6/6) + live E2E батлагдсан
+- **Фаз 3 (✅):** `s-owner_text, s-malchin, f-malchin` — 3 form-control contact select (`f-malchin` edit prefill-д `._sdSync()` — value-only өөрчлөлт childList observer-ийг ажиллуулахгүй тул)
+- **Хойшлуулсан (compact mode хэрэгтэй):** `db-butets-herd, db-butets-ezen, db-naadam-ez, sf-trainer, sf-ez, gelding_event-ez-filter` (compact custom filter), `ms-trainer-sel` (onchange хуудас дахин барина), `eq-trainer` (том засах модал)
+- **⚠️ showAllOnFocus чухал:** `bindTypeahead`-д `showAllOnFocus:true` дамжуулахгүй бол focus дээр (хоосон query) жагсаалт харагдахгүй. `searchableDropdown` default true. Бүх шинэ хэрэглээнд заавал өг.
+- Локал DOM симуляц (Фаз 1: 7/7, Фаз 2: 6/6, Фаз 3: 6/6) + live E2E батлагдсан
 
 ### Ажлын төрлийн өнгө
 ```css
