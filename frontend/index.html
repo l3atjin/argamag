@@ -96,6 +96,14 @@ tr:hover td{background:var(--amber-l)}
 .hp-badge{display:inline-flex;align-items:center;gap:5px;background:var(--amber-l);border:1px solid var(--amber);color:var(--amber-d);border-radius:14px;padding:3px 6px 3px 10px;font-size:12px;font-weight:600}
 .hp-badge-x{border:none;background:rgba(0,0,0,0.08);color:var(--amber-d);width:16px;height:16px;border-radius:50%;cursor:pointer;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
 .hp-badge-x:hover{background:#B91C3B;color:#fff}
+/* Typeahead (зүс, угшил, эзэмшигч) */
+.ta-wrap{position:relative}
+.ta-results{position:absolute;top:100%;left:0;right:0;z-index:50;background:#fff;border:1px solid var(--border);border-radius:8px;max-height:220px;overflow-y:auto;box-shadow:0 6px 18px rgba(0,0,0,0.12);margin-top:2px}
+.ta-item{padding:7px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--gray-ll)}
+.ta-item:last-child{border-bottom:none}
+.ta-item:hover{background:var(--amber-l)}
+.ta-create{color:var(--amber-d);font-weight:600}
+.ta-empty{padding:7px 10px;color:var(--text-ss);font-size:12px}
 .gen-tag{background:var(--amber-l);color:var(--amber-d);border:1px solid var(--amber);padding:1px 7px;border-radius:6px;font-size:10px;font-weight:600}
 .pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px}
 .pag-btn{padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);cursor:pointer;font-size:11px;font-weight:500}
@@ -421,11 +429,19 @@ textarea.form-control{resize:vertical;min-height:60px}
         </div>
         <div class="form-group">
           <label class="form-label">Зүс</label>
-          <div class="input-add"><select class="form-control" id="f-zus"></select><button class="btn-icon" onclick="addConfig('color','f-zus')">＋</button></div>
+          <div class="ta-wrap">
+            <input type="hidden" id="f-zus">
+            <input type="text" class="form-control ta-input" id="f-zus-search" placeholder="Зүс хайх эсвэл шинээр нэмэх..." autocomplete="off">
+            <div class="ta-results" id="f-zus-results" style="display:none"></div>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Угшил</label>
-          <div class="input-add"><select class="form-control" id="f-breed_text"></select><button class="btn-icon" onclick="addConfig('breed','f-breed_text')">＋</button></div>
+          <div class="ta-wrap">
+            <input type="hidden" id="f-breed_text">
+            <input type="text" class="form-control ta-input" id="f-breed_text-search" placeholder="Угшил хайх эсвэл шинээр нэмэх..." autocomplete="off">
+            <div class="ta-results" id="f-breed_text-results" style="display:none"></div>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Гарал</label>
@@ -4760,10 +4776,9 @@ async function openAduuModal(id=null) {
   ownerTextRows = [];
   document.getElementById('horse-modal-title').textContent = id?'Адуу засах':'Шинэ адуу бүртгэх';
   document.getElementById('f-id').value = id||'';
-  document.getElementById('f-breed_text').innerHTML = configOptions('breed');
+  initHorseFormTypeaheads();
   document.getElementById('f-garal').innerHTML = configOptions('origin');
   document.getElementById('f-herd').innerHTML = herdOptions();
-  document.getElementById('f-zus').innerHTML = configOptions('color');
   document.getElementById('f-bie').innerHTML = configOptions('body_marking');
   document.getElementById('f-tolgoi').innerHTML = configOptions('head_marking');
   document.getElementById('f-hel').innerHTML = configOptions('leg_marking');
@@ -4821,11 +4836,11 @@ async function openAduuModal(id=null) {
     if (hhArrow) hhArrow.textContent = '▼';
     renderHeelHayasList();
     if (document.getElementById('f-gelded')) document.getElementById('f-gelded').checked = !!h.gelded;
-    document.getElementById('f-breed_text').value = h.breed_id||'';
+    taSetField('f-breed_text','f-breed_text-search',configs['breed'],h.breed_id);
     document.getElementById('f-tsus').value = h.blood_percentage||'';
     document.getElementById('f-garal').value = h.origin_id||'';
     document.getElementById('f-herd').value = h.herd_id||'';
-    document.getElementById('f-zus').value = h.color_id||'';
+    taSetField('f-zus','f-zus-search',configs['color'],h.color_id);
     document.getElementById('f-status').value = h.status||'active';
     document.getElementById('f-birth_date').value = h.birth_date?h.birth_date.substring(0,10):'';
     document.getElementById('f-date-gui').checked = h.birth_date_unknown==1;
@@ -4858,6 +4873,8 @@ async function openAduuModal(id=null) {
     ['f-name','f-horse-id','f-number','f-tsus','f-chip','f-passport','f-dna','f-brand','f-location','f-notes','f-eceg-search','f-eh-search'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     ['f-eceg-id','f-eh-id'].forEach(id=>document.getElementById(id).value='');
     ['f-eceg-selected','f-eh-selected','f-eceg-results','f-eh-results'].forEach(id=>{document.getElementById(id).innerHTML='';});
+    taSetField('f-zus','f-zus-search',null,null);
+    taSetField('f-breed_text','f-breed_text-search',null,null);
     // registered default 1
     document.getElementById('f-id-gui').checked=false;
     document.getElementById('f-date-gui').checked=false;
@@ -4912,16 +4929,135 @@ function switchTab(name) {
   document.getElementById('tab-'+name).classList.add('active');
 }
 
+// ── Дахин ашиглагдах typeahead (зүс, угшил, эзэмшигч) ──
+// searchEl: харагдах текст input, hiddenEl: id хадгалах input, resultsEl: унждаг жагсаалт
+// getItems: () => [{id,name}]. Кирилл-д JS toLowerCase зөв ажиллана.
+function bindTypeahead(searchEl, hiddenEl, resultsEl, getItems, opts) {
+  opts = opts || {};
+  function draw() {
+    const q = (searchEl.value || '').trim().toLowerCase();
+    resultsEl.textContent = '';
+    if (!q && !opts.showAllOnFocus) { resultsEl.style.display = 'none'; return; }
+    let matches = getItems();
+    if (q) matches = matches.filter(it => (it.name || '').toLowerCase().indexOf(q) !== -1);
+    matches = matches.slice(0, 50);
+    resultsEl.style.display = 'block';
+    matches.forEach(it => {
+      const d = document.createElement('div');
+      d.className = 'ta-item';
+      d.textContent = it.name;
+      d.onmousedown = (e) => { e.preventDefault(); pick(it); };
+      resultsEl.appendChild(d);
+    });
+    if (matches.length === 0) {
+      if (opts.allowCreate && q) {
+        const d = document.createElement('div');
+        d.className = 'ta-item ta-create';
+        d.textContent = '＋ "' + searchEl.value.trim() + '" нэмэх';
+        d.onmousedown = async (e) => { e.preventDefault(); const it = await opts.allowCreate(searchEl.value.trim()); if (it) pick(it); };
+        resultsEl.appendChild(d);
+      } else {
+        const d = document.createElement('div');
+        d.className = 'ta-empty';
+        d.textContent = 'Олдсонгүй';
+        resultsEl.appendChild(d);
+      }
+    }
+  }
+  function pick(it) {
+    hiddenEl.value = it.id;
+    searchEl.value = it.name;
+    resultsEl.style.display = 'none';
+    if (opts.onSelect) opts.onSelect(it);
+  }
+  searchEl.addEventListener('input', () => { hiddenEl.value = ''; if (opts.onSelect) opts.onSelect(null); draw(); });
+  searchEl.addEventListener('focus', draw);
+  searchEl.addEventListener('blur', () => setTimeout(() => { resultsEl.style.display = 'none'; }, 150));
+}
+
+// Зүс/угшил typeahead-ийг нэг л удаа bind хийнэ (modal DOM статик тул давхарлахаас сэргийлнэ)
+function initHorseFormTypeaheads() {
+  if (window._horseTAbound) return;
+  window._horseTAbound = true;
+  bindTypeahead(
+    document.getElementById('f-zus-search'), document.getElementById('f-zus'), document.getElementById('f-zus-results'),
+    () => configs['color'] || [],
+    { allowCreate: async (q) => {
+        const r = await fetch('/api/options', {method:'POST', body:new URLSearchParams({type:'color', name:q})});
+        const data = await r.json(); await loadConfigs(); notify('"'+q+'" зүс нэмэгдлээ!'); return {id:data.id, name:q};
+    } });
+  bindTypeahead(
+    document.getElementById('f-breed_text-search'), document.getElementById('f-breed_text'), document.getElementById('f-breed_text-results'),
+    () => configs['breed'] || [],
+    { allowCreate: async (q) => {
+        const r = await fetch('/api/options', {method:'POST', body:new URLSearchParams({type:'breed', name:q})});
+        const data = await r.json(); await loadConfigs(); notify('"'+q+'" угшил нэмэгдлээ!'); return {id:data.id, name:q};
+    } });
+}
+
+// hidden id + харагдах текстийг зэрэг тохируулах (засах горим / шинэ)
+function taSetField(hiddenId, searchId, list, id) {
+  const hid = document.getElementById(hiddenId), se = document.getElementById(searchId);
+  if (hid) hid.value = id || '';
+  const it = id ? (list || []).find(x => x.id === id) : null;
+  if (se) se.value = it ? it.name : '';
+}
+
 function addEzeshigchRow() { ownerTextRows.push({contact_id:null,share_percent:100}); renderEzeshigchRows(); }
 
 function renderEzeshigchRows() {
-  document.getElementById('owner_text-rows').innerHTML = ownerTextRows.map((e,i)=>
-    '<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">' +
-    '<select class="form-control" onchange="ownerTextRows['+i+'].contact_id=+this.value">'+contactOptions('owner_text',e.contact_id)+'</select>' +
-    '<button class="btn-icon" onclick="addEzeshigchContact('+i+')" title="Шинэ эзэмшигч нэмэх">＋</button>' +
-    '<input type="number" class="form-control" style="width:70px" value="'+e.share_percent+'" min="1" max="100" onchange="ownerTextRows['+i+'].share_percent=+this.value" placeholder="%">' +
-    '<button class="btn-icon" onclick="ownerTextRows.splice('+i+',1);renderEzeshigchRows()">✕</button></div>'
-  ).join('');
+  const box = document.getElementById('owner_text-rows');
+  box.textContent = '';
+  ownerTextRows.forEach((e, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:flex-start';
+    // Typeahead
+    const wrap = document.createElement('div');
+    wrap.className = 'ta-wrap';
+    wrap.style.flex = '1';
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    const search = document.createElement('input');
+    search.type = 'text';
+    search.className = 'form-control ta-input';
+    search.placeholder = 'Эзэмшигч хайх эсвэл шинээр нэмэх...';
+    search.autocomplete = 'off';
+    const results = document.createElement('div');
+    results.className = 'ta-results';
+    results.style.display = 'none';
+    wrap.appendChild(hidden); wrap.appendChild(search); wrap.appendChild(results);
+    const cur = e.contact_id ? contactList.find(c => c.id === e.contact_id) : null;
+    if (cur) { hidden.value = cur.id; search.value = cur.name; }
+    bindTypeahead(search, hidden, results,
+      () => contactList.filter(c => c.type === 'owner_text'),
+      { showAllOnFocus: true,
+        onSelect: (it) => { ownerTextRows[i].contact_id = it ? it.id : null; },
+        allowCreate: async (q) => {
+          const r = await api('/api/contacts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:q, type:'owner_text'})});
+          await loadConfigs();
+          ownerTextRows[i].contact_id = r.id;
+          notify('"'+q+'" эзэмшигч нэмэгдлээ!');
+          return {id:r.id, name:q};
+        } });
+    row.appendChild(wrap);
+    // Хувь %
+    const share = document.createElement('input');
+    share.type = 'number';
+    share.className = 'form-control';
+    share.style.width = '70px';
+    share.value = e.share_percent;
+    share.min = 1; share.max = 100; share.placeholder = '%';
+    share.onchange = () => { ownerTextRows[i].share_percent = +share.value; };
+    row.appendChild(share);
+    // Устгах
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'btn-icon';
+    rm.textContent = '✕';
+    rm.onclick = () => { ownerTextRows.splice(i, 1); renderEzeshigchRows(); };
+    row.appendChild(rm);
+    box.appendChild(row);
+  });
 }
 
 async function addEzeshigchContact(i) {
