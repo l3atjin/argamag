@@ -174,7 +174,9 @@ TASK_TYPES = {
 - **`draw(isFocus)`:** focus дээр (сонголттой байсан ч) бүх сонголт харагдана → солиход хялбар; бичихэд шүүгдэнэ
 - **⚠️ Adv-search эзэмшигч = `s-owner_text`** (Фаз 3-д bind), `sf-ez` биш. `sf-*` нь Уралдааны дүнгийн filter (өөр хуудас)
 - **Filter-үүд (✅ бүгд):** `sf-ez, sf-trainer` (уралдааны дүн), `db-butets-herd, db-butets-ezen` (dashboard бүрэлдэхүүн), `db-naadam-ez` (dashboard наадам, value=нэр, `selected`-ээр resync), `gelding_event-ez-filter` (хөнгөлөх), `ms-trainer-sel` (морь сойх, huvaari tab; onchange нь `renderMoriSoikh()`-оор дахин барьж re-bind), `eq-trainer` (уралдаан засах модал)
-- **Үлдсэн (compact/single-select бус, тусад нь):** Фаз 4 адуу select-үүд (`sf-horse, naadam-horse-sel, db-naadam-horse, q-sg-nner-sel, eq-nner-sel` — 368+), Фаз 5 одоо байгаа pattern нэгтгэх (`searchParent`/task picker/`dbDdSearch`), Фаз 6 аймаг/сум cascade
+- **Фаз 4 (✅):** адуу filter select-үүд (368+): `sf-horse` (уралдааны дүн), `db-naadam-horse` (dashboard наадам), `naadam-horse-sel` (наадам хуудас, 2 render exit-д bind). Focus дээр эхний 50 харагдана, бичихэд шүүгдэнэ
+- **`q-sg-nner-sel, eq-nner-sel` — адуу биш**, наадмын нэрний select+text давхар-горим — хэвээр үлдээв
+- **Үлдсэн:** Фаз 5 одоо байгаа pattern нэгтгэх (`searchParent` эцэг/эх, task picker, `dbDdSearch`), Фаз 6 аймаг/сум cascade
 - **⚠️ showAllOnFocus чухал:** `bindTypeahead`-д `showAllOnFocus:true` дамжуулахгүй бол focus дээр (хоосон query) жагсаалт харагдахгүй. `searchableDropdown` default true. Бүх шинэ хэрэглээнд заавал өг.
 - Локал DOM симуляц (Фаз 1: 7/7, Фаз 2: 6/6, Фаз 3: 6/6) + live E2E батлагдсан
 
