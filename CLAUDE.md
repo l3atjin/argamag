@@ -170,10 +170,11 @@ TASK_TYPES = {
 - **Фаз 1 (✅):** `s-zus, s-breed_text, psub-*, hsub-*, h-*, um-*` (zus/breed_text) — 10 select
 - **Фаз 2 (✅):** `s-herd, q-aj-herd, f-trainer-sel, q-sg-trainer, ms-trainer, q-nu-trainer-id` — 6 form-control select
 - **Фаз 3 (✅):** `s-owner_text, s-malchin, f-malchin` — 3 form-control contact select (`f-malchin` edit prefill-д `._sdSync()` — value-only өөрчлөлт childList observer-ийг ажиллуулахгүй тул)
-- **Compact mode (✅):** `searchableDropdown(id,{compact:true})` — эх select-ийн inline загварыг хайлтын input-д хуулж, filter мөрөнд таарна. Хэрэглээ: `sf-ez, sf-trainer` (Уралдааны дүнгийн filter, prefill дараа bind)
+- **Compact mode (✅):** `searchableDropdown(id,{compact:true})` — эх select-ийн inline загварыг хайлтын input-д хуулж, filter мөрөнд таарна (form-control биш, wrap inline-block)
 - **`draw(isFocus)`:** focus дээр (сонголттой байсан ч) бүх сонголт харагдана → солиход хялбар; бичихэд шүүгдэнэ
 - **⚠️ Adv-search эзэмшигч = `s-owner_text`** (Фаз 3-д bind), `sf-ez` биш. `sf-*` нь Уралдааны дүнгийн filter (өөр хуудас)
-- **Хойшлуулсан (compact mode-оор хийж болно):** `db-butets-herd, db-butets-ezen, db-naadam-ez, gelding_event-ez-filter` (compact custom filter), `ms-trainer-sel` (onchange хуудас дахин барина), `eq-trainer` (том засах модал)
+- **Filter-үүд (✅ бүгд):** `sf-ez, sf-trainer` (уралдааны дүн), `db-butets-herd, db-butets-ezen` (dashboard бүрэлдэхүүн), `db-naadam-ez` (dashboard наадам, value=нэр, `selected`-ээр resync), `gelding_event-ez-filter` (хөнгөлөх), `ms-trainer-sel` (морь сойх, huvaari tab; onchange нь `renderMoriSoikh()`-оор дахин барьж re-bind), `eq-trainer` (уралдаан засах модал)
+- **Үлдсэн (compact/single-select бус, тусад нь):** Фаз 4 адуу select-үүд (`sf-horse, naadam-horse-sel, db-naadam-horse, q-sg-nner-sel, eq-nner-sel` — 368+), Фаз 5 одоо байгаа pattern нэгтгэх (`searchParent`/task picker/`dbDdSearch`), Фаз 6 аймаг/сум cascade
 - **⚠️ showAllOnFocus чухал:** `bindTypeahead`-д `showAllOnFocus:true` дамжуулахгүй бол focus дээр (хоосон query) жагсаалт харагдахгүй. `searchableDropdown` default true. Бүх шинэ хэрэглээнд заавал өг.
 - Локал DOM симуляц (Фаз 1: 7/7, Фаз 2: 6/6, Фаз 3: 6/6) + live E2E батлагдсан
 
