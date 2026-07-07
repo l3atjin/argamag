@@ -6285,7 +6285,7 @@ async function renderSungaa() {
 
   // Filter мөр — нэг мөрөнд, scroll хийх боломжтой
   var SF = 'font-size:11px;padding:5px 8px;border-radius:7px;border:1px solid var(--border);background:var(--card);cursor:pointer;min-width:0;max-width:160px';
-  html += '<div style="display:flex;gap:6px;margin-bottom:14px;align-items:center;overflow-x:auto;padding-bottom:2px;flex-wrap:nowrap">';
+  html += '<div style="display:flex;gap:6px;margin-bottom:14px;align-items:center;flex-wrap:wrap">';
   html += '<select id="sf-horse" onchange="practiceRaceApplyFilter()" style="'+SF+'">'+opts(horseSet,'Бүх адуу')+'</select>';
   html += '<select id="sf-naadam" onchange="practiceRaceApplyFilter()" style="'+SF+'">'+opts(naadamSet,'Бүх наадам')+'</select>';
   html += '<select id="sf-trainer" onchange="practiceRaceApplyFilter()" style="'+SF+'">'+opts(trainerSet,'Бүх уяач')+'</select>';
