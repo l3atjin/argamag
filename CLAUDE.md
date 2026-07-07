@@ -159,6 +159,17 @@ TASK_TYPES = {
 - `/api/colors`, `/api/breeds` байхгүй — зүс/угшил нь `option` хүснэгтэд (`type='color'/'breed'`), `/api/options`-оор ирнэ
 - Live дээр E2E батлагдсан (allowCreate → адуу хадгалах)
 
+### Searchable dropdown нэгтгэл — `searchableDropdown(selectId, opts)`
+Системийн бүх native `<select>`-ийг хайлттай болгох ерөнхий helper (`bindTypeahead`-ийг дотооддоо ашиглана).
+- **Байрандаа баяжуулна:** select-ийг нууж, дээр нь хайлтын input тавьж, сонголтыг `select.value`-руу бичнэ. `<select>` үнэний эх сурвалж хэвээр → **populate/save/prefill код хөндөгдөхгүй**
+- `change` event зөвхөн утга бодитоор солигдоход илгээнэ (бичих бүрд биш)
+- `MutationObserver` (childList) → option repopulate (`configOptions`/`addConfig`) үед харагдах текстийг дахин тааруулна; prefill-тэй форм (um) дээр prefill-ийн дараа bind хийнэ
+- `select._sd` флаг → давхар bind-аас сэргийлнэ (идемпотент); `select._sdSync()` → гараар resync
+- `opts.showAllOnFocus` default true (dropdown тул focus дээр бүгд харагдана)
+- **Нэгтгэх дараалал** (судалгаанаас): Фаз 1 зүс/угшил ✅ → Фаз 2 сүрэг+уяач → 3 эзэмшигч → 4 адуу → 5 одоо байгаа pattern (`searchParent`/task picker/`dbDdSearch`) нэгтгэх → 6 аймаг/сум cascade
+- **Фаз 1 хэрэглээ (✅):** `s-zus, s-breed_text, psub-*, hsub-*, h-*, um-*` (zus/breed_text) — 10 select, форм тус бүрийн render цэгт нэг мөр дуудлагаар
+- Локал DOM симуляц (7/7) + live E2E батлагдсан
+
 ### Ажлын төрлийн өнгө
 ```css
 vaccine:          #1D9E75  /* ногоон */
