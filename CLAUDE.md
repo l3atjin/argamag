@@ -139,6 +139,15 @@ TASK_TYPES = {
 2. **Жагсаалт** — шүүлттэй жагсаалт, статус харагдана
 3. **Давтагдах** — давтагдах ажлуудын тохиргоо
 
+### Адуу сонгогч (Шинэ ажил / Ажил засах форм)
+`horse_link_type='specific'` үед scroll multi-select-ийг хайлттай picker-ээр сольсон (`.hp-*` класс, `ajilHP*` функцууд):
+- **Хайлтын input** — нэр / № дугаар / registration_code / зүсээр шүүнэ. JS `toLowerCase()` ашигласан тул Cyrillic зөв (SQLite `UPPER/LOWER`-ийн Кирилл алдаанаас ялгаатай)
+- **Сонгосон адуу** — X товчтой badge, тус бүрийг хасна (`createElement`, escape-гүй)
+- **"+ Сүргээр нэмэх" dropdown** — сүргийн бүх адууг badge болгон нэмнэ, тус бүр хасагдана
+- State: `window._ajilHP = {all:[], sel:Map}`; `saveAjil` нь `sel`-ээс `horse_ids` авна
+- `herd`, `filter` link type-ууд хэвээр (dynamic семантик эвдээгүй)
+- Live дээр E2E батлагдсан (create/edit/delete)
+
 ### Ажлын төрлийн өнгө
 ```css
 vaccine:          #1D9E75  /* ногоон */
