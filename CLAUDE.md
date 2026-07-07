@@ -166,9 +166,11 @@ TASK_TYPES = {
 - `MutationObserver` (childList) → option repopulate (`configOptions`/`addConfig`) үед харагдах текстийг дахин тааруулна; prefill-тэй форм (um) дээр prefill-ийн дараа bind хийнэ
 - `select._sd` флаг → давхар bind-аас сэргийлнэ (идемпотент); `select._sdSync()` → гараар resync
 - `opts.showAllOnFocus` default true (dropdown тул focus дээр бүгд харагдана)
-- **Нэгтгэх дараалал** (судалгаанаас): Фаз 1 зүс/угшил ✅ → Фаз 2 сүрэг+уяач → 3 эзэмшигч → 4 адуу → 5 одоо байгаа pattern (`searchParent`/task picker/`dbDdSearch`) нэгтгэх → 6 аймаг/сум cascade
-- **Фаз 1 хэрэглээ (✅):** `s-zus, s-breed_text, psub-*, hsub-*, h-*, um-*` (zus/breed_text) — 10 select, форм тус бүрийн render цэгт нэг мөр дуудлагаар
-- Локал DOM симуляц (7/7) + live E2E батлагдсан
+- **Нэгтгэх дараалал** (судалгаанаас): Фаз 1 зүс/угшил ✅ → Фаз 2 сүрэг+уяач ✅ → 3 эзэмшигч → 4 адуу → 5 одоо байгаа pattern (`searchParent`/task picker/`dbDdSearch`) нэгтгэх → 6 аймаг/сум cascade
+- **Фаз 1 (✅):** `s-zus, s-breed_text, psub-*, hsub-*, h-*, um-*` (zus/breed_text) — 10 select
+- **Фаз 2 (✅):** `s-herd, q-aj-herd, f-trainer-sel, q-sg-trainer, ms-trainer, q-nu-trainer-id` — 6 form-control select
+- **Фаз 2 хойшлуулсан:** `db-butets-herd`, `sf-trainer` (compact custom загвартай filter — searchableDropdown-д compact mode нэмэх хэрэгтэй), `ms-trainer-sel` (onchange нь `renderMoriSoikh()`-оор хуудсыг дахин барьдаг), `eq-trainer` (том засах модал, одоо prefill байхгүй)
+- Локал DOM симуляц (Фаз 1: 7/7, Фаз 2: 6/6) + live E2E батлагдсан
 
 ### Ажлын төрлийн өнгө
 ```css
