@@ -1112,6 +1112,8 @@ async function renderAduu(reset=false) {
     // Фаз 1: зүс/угшил шүүлтийг хайлттай болгох
     searchableDropdown('s-breed_text', {placeholder:'Угшил хайх...'});
     searchableDropdown('s-zus', {placeholder:'Зүс хайх...'});
+    // Фаз 2: сүрэг шүүлт
+    searchableDropdown('s-herd', {placeholder:'Сүрэг хайх...'});
   }
 
   fetchAduuTable();
@@ -2309,6 +2311,7 @@ async function openUraldaanModal(horse_id, naadam_id) {
     '<input type="hidden" id="q-sg-naadam-id" value="'+(naadam_id||'')+'"></div>';
 
   showQuick('Уралдаан бүртгэх', form, saveSungaa);
+  searchableDropdown('q-sg-trainer', {placeholder:'Уяач хайх...'});
 
   if (horse_id) {
     api('/api/horses/'+horse_id).then(function(a) {
@@ -4493,6 +4496,7 @@ async function moriSoikhBurtgehUyaach(horse_id, type, trainer_id) {
     notify(type+' бүртгэгдлээ! 🐴');
     renderMoriSoikh();
   });
+  searchableDropdown('ms-trainer', {placeholder:'Уяач хайх...'});
 }
 
 
@@ -4535,6 +4539,7 @@ async function openNemehUyaachToAduu(horse_id, horse_name) {
     closeQuick(); notify('Уяач нэмэгдлээ!');
     if (window.loadDetailUyaach) window.loadDetailUyaach(horse_id);
   });
+  searchableDropdown('q-nu-trainer-id', {placeholder:'Уяач хайх...'});
 }
 
 function buildCarousel(photos) {
@@ -4799,6 +4804,7 @@ async function openAduuModal(id=null) {
   if (trainerSelEl) {
     trainerSelEl.innerHTML = '<option value="">— Сонгох —</option>' +
       (trainerListFrm||[]).map(u=>'<option value="'+u.id+'">'+u.name+'</option>').join('');
+    searchableDropdown('f-trainer-sel', {placeholder:'Уяач хайх...'});
   }
   // Зургийн preview цэвэрлэх
   const zpEl = document.getElementById('f-photo-preview');
@@ -5917,6 +5923,7 @@ async function ajilLinkTypeChange(linkType, task) {
   if (!el) return;
   if (linkType === 'herd') {
     el.innerHTML = '<div class="form-group"><label class="form-label">Сүрэг</label><select class="form-control" id="q-aj-herd">'+herdOptions(task?task.herd_id:null)+'</select></div>';
+    searchableDropdown('q-aj-herd', {placeholder:'Сүрэг хайх...'});
   } else if (linkType === 'specific') {
     el.innerHTML = '<div class="form-group"><label class="form-label">Адуу сонгох</label>' +
       '<div class="hp-searchrow">' +
