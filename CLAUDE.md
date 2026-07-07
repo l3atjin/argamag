@@ -148,6 +148,17 @@ TASK_TYPES = {
 - `herd`, `filter` link type-ууд хэвээр (dynamic семантик эвдээгүй)
 - Live дээр E2E батлагдсан (create/edit/delete)
 
+### Typeahead компонент — `bindTypeahead` (Шинэ адуу бүртгэх форм)
+Дахин ашиглагдах хайлттай сонголт. `.ta-*` класс, `bindTypeahead(searchEl, hiddenEl, resultsEl, getItems, opts)`:
+- Бичихэд `getItems()`-ээс шүүнэ (Cyrillic → JS `toLowerCase()`), доор absolute унждаг жагсаалт
+- Сонгоход **харагдах input-д нэр, hidden input-д id** → `saveAduu`/засах prefill (`taSetField`) хэвээр ажиллана
+- `opts.allowCreate(q)` → олдоогүй бол "＋ нэмэх" мөр
+- `opts.showAllOnFocus` → focus дээр бүгд харагдана (эзэмшигчид)
+- `blur`-д 150ms дараа хаана; сонголт нь `onmousedown+preventDefault`-аар blur-аас өмнө ажиллана
+- Хэрэглээ: **Зүс** (`f-zus`, `configs['color']`, шинэ→`/api/options` type=color), **Угшил** (`f-breed_text`, `configs['breed']`, type=breed), **Эзэмшигч** (олон мөр, `contactList` type=owner_text, шинэ→`/api/contacts`)
+- `/api/colors`, `/api/breeds` байхгүй — зүс/угшил нь `option` хүснэгтэд (`type='color'/'breed'`), `/api/options`-оор ирнэ
+- Live дээр E2E батлагдсан (allowCreate → адуу хадгалах)
+
 ### Ажлын төрлийн өнгө
 ```css
 vaccine:          #1D9E75  /* ногоон */
