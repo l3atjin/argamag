@@ -4948,12 +4948,13 @@ function switchTab(name) {
 // getItems: () => [{id,name}]. Кирилл-д JS toLowerCase зөв ажиллана.
 function bindTypeahead(searchEl, hiddenEl, resultsEl, getItems, opts) {
   opts = opts || {};
-  function draw() {
+  function draw(isFocus) {
     const q = (searchEl.value || '').trim().toLowerCase();
+    const showAll = isFocus && opts.showAllOnFocus;   // focus дээр (сонголттой байсан ч) бүгдийг харуул
     resultsEl.textContent = '';
     if (!q && !opts.showAllOnFocus) { resultsEl.style.display = 'none'; return; }
     let matches = getItems();
-    if (q) matches = matches.filter(it => (it.name || '').toLowerCase().indexOf(q) !== -1);
+    if (q && !showAll) matches = matches.filter(it => (it.name || '').toLowerCase().indexOf(q) !== -1);
     matches = matches.slice(0, 50);
     resultsEl.style.display = 'block';
     matches.forEach(it => {
@@ -4984,8 +4985,8 @@ function bindTypeahead(searchEl, hiddenEl, resultsEl, getItems, opts) {
     resultsEl.style.display = 'none';
     if (opts.onSelect) opts.onSelect(it);
   }
-  searchEl.addEventListener('input', () => { hiddenEl.value = ''; if (opts.onSelect) opts.onSelect(null); draw(); });
-  searchEl.addEventListener('focus', draw);
+  searchEl.addEventListener('input', () => { hiddenEl.value = ''; if (opts.onSelect) opts.onSelect(null); draw(false); });
+  searchEl.addEventListener('focus', () => draw(true));
   searchEl.addEventListener('blur', () => setTimeout(() => { resultsEl.style.display = 'none'; }, 150));
 }
 
@@ -5026,15 +5027,24 @@ function searchableDropdown(selectId, opts) {
   const select = (typeof selectId === 'string') ? document.getElementById(selectId) : selectId;
   if (!select || select._sd) return;                 // байхгүй эсвэл давхар bind-аас сэргийлнэ
   select._sd = true;
+  const origStyle = select.getAttribute('style') || '';   // compact mode-д эх загварыг хуулна
   select.style.display = 'none';
   const wrap = document.createElement('div');
   wrap.className = 'ta-wrap';
-  wrap.style.flex = '1';                              // .input-add (flex) дотор зөв харагдана
   const search = document.createElement('input');
   search.type = 'text';
-  search.className = 'form-control ta-input';
   search.autocomplete = 'off';
   search.placeholder = opts.placeholder || 'Хайх...';
+  if (opts.compact) {
+    // Compact filter (жижиг custom загвартай) — эх select-ийн inline загварыг хуулна
+    wrap.style.display = 'inline-block';
+    wrap.style.verticalAlign = 'middle';
+    search.className = 'ta-input';
+    search.style.cssText = origStyle.replace(/display\s*:\s*none;?/gi, '');
+  } else {
+    wrap.style.flex = '1';                            // .input-add (flex) дотор зөв харагдана
+    search.className = 'form-control ta-input';
+  }
   const results = document.createElement('div');
   results.className = 'ta-results';
   results.style.display = 'none';
@@ -6300,6 +6310,9 @@ async function renderSungaa() {
   if (_savedFilter.ez) { var el=document.getElementById('sf-ez'); if(el) el.value=_savedFilter.ez; }
   if (_savedFilter.ang) { var el=document.getElementById('sf-ang'); if(el) el.value=_savedFilter.ang; }
   if (_savedFilter.jil) { var el=document.getElementById('sf-jil'); if(el) el.value=_savedFilter.jil; }
+  // Эзэмшигч/уяач шүүлтийг хайлттай болгох (compact mode — filter-ийн жижиг загвар)
+  searchableDropdown('sf-ez', {compact:true, placeholder:'Бүх эзэмшигч'});
+  searchableDropdown('sf-trainer', {compact:true, placeholder:'Бүх уяач'});
   // Filter хэрэглэх
   var hasFilter = Object.values(_savedFilter).some(v=>v);
   if (hasFilter) practiceRaceApplyFilter();
