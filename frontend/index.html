@@ -2571,6 +2571,7 @@ async function dbLoadNaadam() {
     var curAduu = horseSel.value;
     horseSel.innerHTML = '<option value="">— Бүх адуу —</option>' + (nd.horse_list||[]).map(function(a){ return '<option value="'+a.id+'"'+(curAduu==a.id?' selected':'')+'>'+a.name+'</option>'; }).join('');
   }
+  searchableDropdown('db-naadam-horse', {compact:true, placeholder:'Бүх адуу'});
   if (ezSel && nd.ez_list) {
     var curEz = ezSel.value;
     ezSel.innerHTML = '<option value="">— Бүх эзэмшигч —</option>' + (nd.ez_list||[]).map(function(e){ return '<option value="'+e+'"'+(curEz==e?' selected':'')+'>'+e+'</option>'; }).join('');
@@ -6315,9 +6316,10 @@ async function renderSungaa() {
   if (_savedFilter.ez) { var el=document.getElementById('sf-ez'); if(el) el.value=_savedFilter.ez; }
   if (_savedFilter.ang) { var el=document.getElementById('sf-ang'); if(el) el.value=_savedFilter.ang; }
   if (_savedFilter.jil) { var el=document.getElementById('sf-jil'); if(el) el.value=_savedFilter.jil; }
-  // Эзэмшигч/уяач шүүлтийг хайлттай болгох (compact mode — filter-ийн жижиг загвар)
+  // Эзэмшигч/уяач/адуу шүүлтийг хайлттай болгох (compact mode — filter-ийн жижиг загвар)
   searchableDropdown('sf-ez', {compact:true, placeholder:'Бүх эзэмшигч'});
   searchableDropdown('sf-trainer', {compact:true, placeholder:'Бүх уяач'});
+  searchableDropdown('sf-horse', {compact:true, placeholder:'Бүх адуу'});
   // Filter хэрэглэх
   var hasFilter = Object.values(_savedFilter).some(v=>v);
   if (hasFilter) practiceRaceApplyFilter();
@@ -7622,6 +7624,7 @@ async function renderNaadam() {
     html += '</div>';
     html += '</div>';
     el.innerHTML = html;
+    searchableDropdown('naadam-horse-sel', {compact:true, placeholder:'Адуугаар шүүх'});
     return;
   }
 
@@ -7661,6 +7664,7 @@ async function renderNaadam() {
   html += '</div>'; // naadam-list-wrap
   html += '</div>';
   el.innerHTML = html;
+  searchableDropdown('naadam-horse-sel', {compact:true, placeholder:'Адуугаар шүүх'});
 
   // Насны ангилал badge-үүд татах
   naadamList.forEach(function(n) {
