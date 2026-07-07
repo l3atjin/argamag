@@ -2575,6 +2575,7 @@ async function dbLoadNaadam() {
     var curEz = ezSel.value;
     ezSel.innerHTML = '<option value="">— Бүх эзэмшигч —</option>' + (nd.ez_list||[]).map(function(e){ return '<option value="'+e+'"'+(curEz==e?' selected':'')+'>'+e+'</option>'; }).join('');
   }
+  searchableDropdown('db-naadam-ez', {compact:true, placeholder:'Бүх эзэмшигч'});
   const el = document.getElementById('db-naadam-content');
   if (!el || !nd) return;
 
@@ -3170,6 +3171,8 @@ function drawDashboardCharts(azargaToo, guuToo, ageLabels, d) {
   if (ezenSel && d.owner_all) {
     ezenSel.innerHTML = '<option value="">Бүх эзэмшигч</option>'+d.owner_all.map(e=>'<option value="'+e.id+'">'+e.name+'</option>').join('');
   }
+  searchableDropdown('db-butets-herd', {compact:true, placeholder:'Бүх сүрэг'});
+  searchableDropdown('db-butets-ezen', {compact:true, placeholder:'Бүх эзэмшигч'});
   dbLoadButets();
   drawUrjilChart();
 
@@ -3610,6 +3613,7 @@ async function renderMoriSoikh() {
 
     html += '</div>';
     el.innerHTML = html;
+    searchableDropdown('ms-trainer-sel', {compact:true, placeholder:'Бүх уяач'});
 
     // Polar mini ачаалах
     horseList.forEach(a=>{
@@ -6164,6 +6168,7 @@ async function editSungaa(id, horse_id, source, context) {
         notify('Алдаа: ' + err.message, 'err');
       }
     });
+    searchableDropdown('eq-trainer', {placeholder:'Уяач хайх...'});
   } catch(e) { window._editSungaaLock = false; throw e; }
   }
 
@@ -7020,6 +7025,7 @@ async function checkHongolSanaulga() {
       '</div>' +
     '</div>' +
     '</div>';
+  searchableDropdown('gelding_event-ez-filter', {compact:true, placeholder:'Бүх эзэмшигч'});
 }
 
 function applyHongolFilter() {
