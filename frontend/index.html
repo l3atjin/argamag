@@ -1109,6 +1109,9 @@ async function renderAduu(reset=false) {
     document.getElementById('s-id').addEventListener('input', function() { srch.horse_id=this.value; schedSearch(); });
     document.getElementById('s-number').addEventListener('input', function() { srch.number=this.value; schedSearch(); });
     document.getElementById('s-chip').addEventListener('input', function() { srch.chip=this.value; schedSearch(); });
+    // Фаз 1: зүс/угшил шүүлтийг хайлттай болгох
+    searchableDropdown('s-breed_text', {placeholder:'Угшил хайх...'});
+    searchableDropdown('s-zus', {placeholder:'Зүс хайх...'});
   }
 
   fetchAduuTable();
@@ -5003,6 +5006,56 @@ function taSetField(hiddenId, searchId, list, id) {
   if (se) se.value = it ? it.name : '';
 }
 
+// searchableDropdown — одоо байгаа native <select>-ийг хайлттай typeahead болгон "баяжуулна".
+// <select> нь үнэний эх сурвалж хэвээр үлдэнэ (populate/save/prefill код хэвээр ажиллана):
+// helper зөвхөн select-ийг нууж, дээр нь хайлтын input тавьж, сонголтыг select.value-руу бичнэ.
+// bindTypeahead-ийг ашигладаг тул Cyrillic/escape/allowCreate логик нэгдмэл.
+function searchableDropdown(selectId, opts) {
+  opts = opts || {};
+  const select = (typeof selectId === 'string') ? document.getElementById(selectId) : selectId;
+  if (!select || select._sd) return;                 // байхгүй эсвэл давхар bind-аас сэргийлнэ
+  select._sd = true;
+  select.style.display = 'none';
+  const wrap = document.createElement('div');
+  wrap.className = 'ta-wrap';
+  wrap.style.flex = '1';                              // .input-add (flex) дотор зөв харагдана
+  const search = document.createElement('input');
+  search.type = 'text';
+  search.className = 'form-control ta-input';
+  search.autocomplete = 'off';
+  search.placeholder = opts.placeholder || 'Хайх...';
+  const results = document.createElement('div');
+  results.className = 'ta-results';
+  results.style.display = 'none';
+  wrap.appendChild(search); wrap.appendChild(results);
+  select.parentNode.insertBefore(wrap, select.nextSibling);
+  // Жагсаалтыг select-ийн одоогийн option-уудаас (live) авна — repopulate болоход шинэчлэгдэнэ
+  const getItems = () => Array.from(select.options)
+    .filter(o => o.value !== '' && o.value != null)
+    .map(o => ({id: o.value, name: o.text}));
+  // hidden-ийн оронд select-рүү бичдэг proxy — зөвхөн утга солигдоход change event илгээнэ
+  const proxy = {
+    get value() { return select.value; },
+    set value(v) {
+      const nv = (v === '' || v == null) ? '' : String(v);
+      if (String(select.value) !== nv) { select.value = nv; select.dispatchEvent(new Event('change')); }
+    }
+  };
+  bindTypeahead(search, proxy, results, getItems, {
+    showAllOnFocus: opts.showAllOnFocus !== false,     // dropdown тул focus дээр бүгд харагдана
+    onSelect: opts.onSelect
+  });
+  // select-ийн одоогийн value-аас харагдах текстийг тааруулна
+  const syncText = () => {
+    const o = select.selectedOptions && select.selectedOptions[0];
+    search.value = (o && o.value !== '') ? o.text : '';
+  };
+  syncText();
+  // option repopulate (configOptions/addConfig) үед текстийг дахин тааруулна
+  new MutationObserver(() => queueMicrotask(syncText)).observe(select, {childList: true});
+  select._sdSync = syncText;                           // prefill дараа гараар дуудах боломжтой
+}
+
 function addEzeshigchRow() { ownerTextRows.push({contact_id:null,share_percent:100}); renderEzeshigchRows(); }
 
 function renderEzeshigchRows() {
@@ -5197,6 +5250,8 @@ async function openParentSubForm(type) {
       document.getElementById('psub-garal-add').onclick=()=>addConfig('origin','psub-garal');
       document.getElementById('psub-zus-add').onclick=()=>addConfig('color','psub-zus');
     }
+    searchableDropdown('psub-breed_text', {placeholder:'Угшил хайх...'});
+    searchableDropdown('psub-zus', {placeholder:'Зүс хайх...'});
   },100);
 }
 
@@ -5362,6 +5417,8 @@ async function renderHialbar() {
   document.getElementById('h-breed_text-add').onclick = () => addConfig('breed','h-breed_text');
   document.getElementById('h-garal-add').onclick  = () => addConfig('origin','h-garal');
   document.getElementById('h-zus-add').onclick    = () => addConfig('color','h-zus');
+  searchableDropdown('h-breed_text', {placeholder:'Угшил хайх...'});
+  searchableDropdown('h-zus', {placeholder:'Зүс хайх...'});
   document.getElementById('h-eceg-h').oninput     = function(){ searchHialbarParent('eceg', this.value); };
   document.getElementById('h-eh-h').oninput       = function(){ searchHialbarParent('eh', this.value); };
   document.getElementById('h-eceg-clr').onclick   = () => clearHialbarParent('eceg');
@@ -5451,6 +5508,8 @@ async function openHialbarSubForm(type) {
     if(a) { a.onclick=()=>addConfig('breed','hsub-breed_text');
       document.getElementById('hsub-garal-add').onclick=()=>addConfig('origin','hsub-garal');
       document.getElementById('hsub-zus-add').onclick=()=>addConfig('color','hsub-zus'); }
+    searchableDropdown('hsub-breed_text', {placeholder:'Угшил хайх...'});
+    searchableDropdown('hsub-zus', {placeholder:'Зүс хайх...'});
   },100);
 }
 
@@ -6750,6 +6809,9 @@ async function openUdamModal(id=null) {
       if (a.sire_id) { document.getElementById('um-eceg-id').value=a.sire_id; document.getElementById('um-eceg-sel').textContent='♂ '+(a.sire_name||''); }
       if (a.dam_id)   { document.getElementById('um-eh-id').value=a.dam_id;     document.getElementById('um-eh-sel').textContent='♀ '+(a.dam_name||''); }
     }
+    // Фаз 1: prefill-ийн дараа bind хийнэ — syncText одоогийн утгыг уншина
+    searchableDropdown('um-breed_text', {placeholder:'Угшил хайх...'});
+    searchableDropdown('um-zus', {placeholder:'Зүс хайх...'});
   }, 100);
 }
 
