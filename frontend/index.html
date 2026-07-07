@@ -81,6 +81,21 @@ tr:hover td{background:var(--amber-l)}
 .badge-idvhigui{background:#FEF3C7;color:#92400E}
 .badge-endsen{background:#F3F4F6;color:#374151}
 .badge-zaragdsan{background:#EDE9FE;color:#5B21B6}
+/* Ажлын форм — адуу сонгогч */
+.hp-searchrow{display:flex;gap:6px;margin-bottom:6px}
+.hp-searchrow .form-control{flex:1;min-width:0}
+.hp-herd-add{max-width:170px;flex:0 0 auto;font-size:12px}
+.hp-results{border:1px solid var(--border);border-radius:8px;max-height:210px;overflow-y:auto;background:#fff;margin-bottom:8px;box-shadow:0 4px 12px rgba(0,0,0,0.06)}
+.hp-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--gray-ll)}
+.hp-item:last-child{border-bottom:none}
+.hp-item:hover{background:var(--amber-l)}
+.hp-item-name{font-weight:600;color:var(--text)}
+.hp-item-meta{font-size:11px;color:var(--text-ss);text-align:right;white-space:nowrap}
+.hp-noresult,.hp-empty{padding:8px 10px;color:var(--text-ss);font-size:12px}
+.hp-badges{display:flex;flex-wrap:wrap;gap:6px;min-height:22px}
+.hp-badge{display:inline-flex;align-items:center;gap:5px;background:var(--amber-l);border:1px solid var(--amber);color:var(--amber-d);border-radius:14px;padding:3px 6px 3px 10px;font-size:12px;font-weight:600}
+.hp-badge-x{border:none;background:rgba(0,0,0,0.08);color:var(--amber-d);width:16px;height:16px;border-radius:50%;cursor:pointer;font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
+.hp-badge-x:hover{background:#B91C3B;color:#fff}
 .gen-tag{background:var(--amber-l);color:var(--amber-d);border:1px solid var(--amber);padding:1px 7px;border-radius:6px;font-size:10px;font-weight:600}
 .pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px}
 .pag-btn{padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);cursor:pointer;font-size:11px;font-weight:500}
@@ -5602,17 +5617,135 @@ async function ajilColDrop(ev, targetStatus) {
   else notify('Энэ төлөв рүү чирж шилжүүлэх боломжгүй','err');
 }
 
+// ── Ажлын форм: адуу сонгогч (хайлт + badge) ──
+function ajilHPState() { return window._ajilHP || (window._ajilHP = {all:[], sel:new Map()}); }
+
+function ajilRenderHorseBadges() {
+  const box = document.getElementById('q-aj-horse-badges');
+  if (!box) return;
+  const st = ajilHPState();
+  box.textContent = '';
+  if (st.sel.size === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'hp-empty';
+    empty.textContent = 'Адуу сонгоогүй байна';
+    box.appendChild(empty);
+    return;
+  }
+  st.sel.forEach((h, id) => {
+    const b = document.createElement('span');
+    b.className = 'hp-badge';
+    const name = document.createElement('span');
+    name.textContent = (h.name || '(нэргүй)') + (h.number ? ' №'+h.number : '');
+    b.appendChild(name);
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'hp-badge-x';
+    x.textContent = '×';
+    x.onclick = () => ajilHorseRemove(id);
+    b.appendChild(x);
+    box.appendChild(b);
+  });
+}
+
+function ajilHorseAdd(id) {
+  const st = ajilHPState();
+  const h = st.all.find(x => x.id === id);
+  if (h && !st.sel.has(id)) { st.sel.set(id, h); ajilRenderHorseBadges(); }
+  ajilHorseSearchFilter();
+}
+
+function ajilHorseRemove(id) {
+  const st = ajilHPState();
+  st.sel.delete(id);
+  ajilRenderHorseBadges();
+  ajilHorseSearchFilter();
+}
+
+function ajilHerdBulkAdd(herdId) {
+  const sel = document.getElementById('q-aj-herd-add');
+  if (sel) sel.value = '';
+  if (!herdId) return;
+  herdId = parseInt(herdId);
+  const st = ajilHPState();
+  let added = 0;
+  st.all.forEach(h => { if (h.herd_id === herdId && !st.sel.has(h.id)) { st.sel.set(h.id, h); added++; } });
+  ajilRenderHorseBadges();
+  ajilHorseSearchFilter();
+  notify(added ? added+' адуу нэмэгдлээ' : 'Шинээр нэмэх адуу алга', added ? 'ok' : 'err');
+}
+
+function ajilHorseSearchFilter() {
+  const inp = document.getElementById('q-aj-horse-search');
+  const box = document.getElementById('q-aj-horse-results');
+  if (!box || !inp) return;
+  const st = ajilHPState();
+  // Cyrillic-д JS toLowerCase зөв ажиллана (SQLite UPPER/LOWER-ээс ялгаатай)
+  const q = (inp.value || '').trim().toLowerCase();
+  box.textContent = '';
+  if (!q) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  const matches = st.all.filter(h => {
+    if (st.sel.has(h.id)) return false;
+    const hay = ((h.name||'')+' '+(h.number||'')+' '+(h.registration_code||'')+' '+(h.color_name||'')).toLowerCase();
+    return hay.indexOf(q) !== -1;
+  }).slice(0, 60);
+  if (matches.length === 0) {
+    const none = document.createElement('div');
+    none.className = 'hp-noresult';
+    none.textContent = 'Олдсонгүй';
+    box.appendChild(none);
+    return;
+  }
+  matches.forEach(h => {
+    const item = document.createElement('div');
+    item.className = 'hp-item';
+    const name = document.createElement('span');
+    name.className = 'hp-item-name';
+    name.textContent = h.name || '(нэргүй)';
+    item.appendChild(name);
+    const meta = document.createElement('span');
+    meta.className = 'hp-item-meta';
+    const parts = [];
+    if (h.number) parts.push('№'+h.number);
+    if (h.color_name) parts.push(h.color_name);
+    if (h.herd_name) parts.push(h.herd_name);
+    meta.textContent = parts.join(' · ');
+    item.appendChild(meta);
+    item.onclick = () => ajilHorseAdd(h.id);
+    box.appendChild(item);
+  });
+}
+
 async function ajilLinkTypeChange(linkType, task) {
   const el = document.getElementById('q-aj-link-detail');
   if (!el) return;
   if (linkType === 'herd') {
     el.innerHTML = '<div class="form-group"><label class="form-label">Сүрэг</label><select class="form-control" id="q-aj-herd">'+herdOptions(task?task.herd_id:null)+'</select></div>';
   } else if (linkType === 'specific') {
-    el.innerHTML = '<div class="form-group"><label class="form-label">Адуу сонгох (Ctrl/Cmd дарж олныг сонгоно)</label><select class="form-control" id="q-aj-horses" multiple style="height:120px"><option>Уншиж байна...</option></select></div>';
+    el.innerHTML = '<div class="form-group"><label class="form-label">Адуу сонгох</label>' +
+      '<div class="hp-searchrow">' +
+        '<input id="q-aj-horse-search" class="form-control" placeholder="Нэр, № дугаар, зүсээр хайх..." autocomplete="off">' +
+        '<select id="q-aj-herd-add" class="form-control hp-herd-add"><option value="">+ Сүргээр нэмэх</option>' +
+          herdList.map(s=>'<option value="'+s.id+'">'+s.name+'</option>').join('') +
+        '</select>' +
+      '</div>' +
+      '<div id="q-aj-horse-results" class="hp-results" style="display:none"></div>' +
+      '<div id="q-aj-horse-badges" class="hp-badges"><div class="hp-empty">Уншиж байна...</div></div>' +
+      '</div>';
+    const st = ajilHPState();
+    st.sel = new Map();
     const horses = await api('/api/horses?limit=1000');
-    const selected = new Set((task&&task.horses||[]).map(h=>h.id));
-    const sel = document.getElementById('q-aj-horses');
-    if (sel) sel.innerHTML = horses.data.map(h=>'<option value="'+h.id+'"'+(selected.has(h.id)?' selected':'')+'>'+h.name+'</option>').join('');
+    st.all = horses.data || [];
+    (task&&task.horses||[]).forEach(th => {
+      const full = st.all.find(x=>x.id===th.id) || th;
+      st.sel.set(th.id, full);
+    });
+    const inp = document.getElementById('q-aj-horse-search');
+    if (inp) inp.oninput = ajilHorseSearchFilter;
+    const herdAdd = document.getElementById('q-aj-herd-add');
+    if (herdAdd) herdAdd.onchange = function(){ ajilHerdBulkAdd(this.value); };
+    ajilRenderHorseBadges();
   } else {
     el.innerHTML = '<div style="color:#888;font-size:12px;padding:8px 0">Бүртгэлтэй бүх амьд адуунд хамаарна.</div>';
   }
@@ -5666,8 +5799,8 @@ async function saveAjil(taskId) {
   if (linkType === 'herd') {
     body.herd_id = parseInt(document.getElementById('q-aj-herd')?.value)||null;
   } else if (linkType === 'specific') {
-    const sel = document.getElementById('q-aj-horses');
-    body.horse_ids = sel ? Array.from(sel.selectedOptions).map(o=>parseInt(o.value)) : [];
+    body.horse_ids = Array.from(ajilHPState().sel.keys());
+    if (body.horse_ids.length === 0) { notify('Дор хаяж нэг адуу сонгоно уу!','err'); return; }
   } else {
     body.filter_json = '{}';
   }
