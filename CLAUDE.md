@@ -14,6 +14,22 @@
 - **Server:** `python3 -m uvicorn backend.main:app --reload --port 8000`
 - **Server restart:** `lsof -ti:8000 | xargs kill -9 && sleep 1 && python3 -m uvicorn backend.main:app --port 8000 --reload`
 
+## Production deploy (Fly.io)
+- **App:** `argamag` · region `nrt` · host `argamag.fly.dev` (= argamag.ai) · owner l3atjin@gmail.com
+- **DB:** `/data/horse.db` (`argamag_data` volume-д mount, `DB_PATH` env fly.toml-д)
+- **Deploy:** `flyctl deploy` (push хийсний дараа)
+  - ⚠️ **`| tail`/`| head` дундуур бүү дамжуул** — pipe-ийн exit code (tail=0) flyctl-ийн жинхэнэ алдааг далдалдаг. Бүтэн output-ыг файлд бич (`flyctl deploy > /tmp/deploy.log 2>&1`), release-ийг `flyctl releases`-ээр батал
+  - ⚠️ **Depot builder флаки:** Fly-ийн remote builder (`api.depot.dev`) заримдаа холбогдож чадахгүй (`can't assign requested address`, DNS fail) → deploy унана. **Дахин оролдвол ихэвчлэн засарна**; байнга унавал `flyctl deploy --local-only` (локал Docker) ашигла
+  - Амжилт = `flyctl releases`-д шинэ `vNN │ complete` мөр
+- **Migration production дээр:** `flyctl ssh console --app argamag -C "python /app/backend/migrate_auth.py"`
+  - ⚠️ **Auto-stop (scale-to-zero):** machine deploy-ийн дараа `stopped` болдог → ssh `no started VMs`/`connection refused` өгнө. Шийдэл: HTTP traffic-аар сэрээх (`until ...status... started; do sleep 2; done`) + start-ийн дараа sshd сэрэхэд хэдэн секунд → ssh-г **хэд дахин давт** (2-3 дахь оролдлогод холбогддог)
+- **Admin хэрэглэгч үүсгэх:** байгаа хэрэглэгчийг дэвшүүлэх нь хамгийн цэвэрхэн (нууц үг hash хэрэггүй):
+  ```
+  flyctl ssh console --app argamag -C "python -c \"import sqlite3; c=sqlite3.connect('/data/horse.db'); c.execute(\\\"UPDATE user SET role='admin' WHERE username='lamjav'\\\"); c.commit()\""
+  ```
+  Шинэ хэрэглэгчид `password_hash` нь **bcrypt** байх ёстой → цэвэр SQL INSERT биш, аппын `hash_password` ашигла (`sys.path.insert(0,'/app/backend'); from auth import hash_password`)
+- **Prod хэрэглэгчид (2026-07 байдлаар):** `lamjav`=admin, `batjin`=guest
+
 ## DB-ийн чухал дүрмүүд
 - **Гол хүснэгт нь `horse`** (хуучин баримтад `aduu` гэж байсан — DB бүхэлдээ Англи нэртэй)
 - `horse.id` = системийн integer ID (PK)
