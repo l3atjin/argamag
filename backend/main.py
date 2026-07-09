@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-import csv, io, calendar
+import csv, io, calendar, sqlite3
 from datetime import date, timedelta
 from pydantic import BaseModel
 from typing import Optional, List
@@ -123,15 +123,18 @@ class LoginIn(BaseModel):
 @app.post("/api/auth/login")
 def auth_login(d: LoginIn, response: Response):
     conn = get_db()
+    # Утас эсвэл username-ээр нэвтрэх. Утас нь өөр хэрэглэгчийн username-тэй
+    # давхацвал username-ыг эхэлж сонгоно (ORDER BY ... DESC).
     row = conn.execute(
-        "SELECT id, username, full_name, password_hash, active FROM user WHERE username=?",
-        (d.username,),
+        "SELECT id, username, full_name, password_hash, active, role FROM user "
+        "WHERE username=? OR phone=? ORDER BY (username=?) DESC LIMIT 1",
+        (d.username, d.username, d.username),
     ).fetchone()
     conn.close()
     if not row or not row["active"] or not verify_password(d.password, row["password_hash"]):
         raise HTTPException(401, "Хэрэглэгчийн нэр эсвэл нууц үг буруу байна")
     set_session_cookie(response, row["id"])
-    return {"username": row["username"], "full_name": row["full_name"]}
+    return {"username": row["username"], "full_name": row["full_name"], "role": row["role"]}
 
 
 @app.post("/api/auth/logout")
@@ -142,7 +145,122 @@ def auth_logout(response: Response):
 
 @app.get("/api/auth/me")
 def auth_me(user: dict = Depends(current_user)):
-    return {"username": user["username"], "full_name": user["full_name"]}
+    return {"username": user["username"], "full_name": user["full_name"], "role": user.get("role")}
+
+
+# ── ХЭРЭГЛЭГЧ УДИРДАХ (зөвхөн admin) ──
+VALID_ROLES = ("admin", "owner", "trainer", "herder", "guest")
+
+
+def require_admin(user: dict = Depends(current_user)) -> dict:
+    """FastAPI dependency: зөвхөн admin ролийг зөвшөөрнө, эс бол 403."""
+    if user.get("role") != "admin":
+        raise HTTPException(403, "Зөвхөн админ эрхтэй")
+    return user
+
+
+class UserIn(BaseModel):
+    full_name: Optional[str] = None
+    username: Optional[str] = None
+    phone: Optional[str] = None
+    password: Optional[str] = None
+    role: str = "guest"
+    contact_id: Optional[int] = None
+    trainer_id: Optional[int] = None
+
+
+@app.get("/api/users")
+def user_list(admin: dict = Depends(require_admin)):
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT u.id, u.username, u.full_name, u.phone, u.role,
+               u.contact_id, u.trainer_id, u.active,
+               c.name AS contact_name, t.name AS trainer_name
+        FROM user u
+        LEFT JOIN contact c ON u.contact_id = c.id
+        LEFT JOIN trainer t ON u.trainer_id = t.id
+        ORDER BY u.active DESC, u.username
+    """).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+@app.post("/api/users")
+def user_create(d: UserIn, admin: dict = Depends(require_admin)):
+    if d.role not in VALID_ROLES:
+        raise HTTPException(400, "Буруу роль")
+    if not d.password:
+        raise HTTPException(400, "Нууц үг шаардлагатай")
+    # phone өгсөн бол username-г түүгээр нөхнө; аль нэг нь заавал байх ёстой
+    username = (d.username or d.phone or "").strip()
+    if not username:
+        raise HTTPException(400, "Утасны дугаар эсвэл хэрэглэгчийн нэр шаардлагатай")
+    phone = (d.phone or None)
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "INSERT INTO user (username, password_hash, full_name, phone, role, contact_id, trainer_id) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (username, hash_password(d.password), d.full_name, phone, d.role, d.contact_id, d.trainer_id),
+        )
+        conn.commit()
+        uid = cur.lastrowid
+    except sqlite3.IntegrityError as e:
+        conn.close()
+        msg = str(e)
+        if "phone" in msg:
+            raise HTTPException(400, "Утасны дугаар давхцаж байна")
+        if "username" in msg:
+            raise HTTPException(400, "Хэрэглэгчийн нэр давхцаж байна")
+        raise HTTPException(400, "Хадгалахад алдаа гарлаа")
+    conn.close()
+    return {"id": uid}
+
+
+@app.put("/api/users/{id}")
+def user_update(id: int, d: UserIn, admin: dict = Depends(require_admin)):
+    if d.role not in VALID_ROLES:
+        raise HTTPException(400, "Буруу роль")
+    conn = get_db()
+    if not conn.execute("SELECT 1 FROM user WHERE id=?", (id,)).fetchone():
+        conn.close()
+        raise HTTPException(404, "Хэрэглэгч олдсонгүй")
+    fields = ["full_name=?", "phone=?", "role=?", "contact_id=?", "trainer_id=?"]
+    params = [d.full_name, (d.phone or None), d.role, d.contact_id, d.trainer_id]
+    if d.username and d.username.strip():
+        fields.append("username=?"); params.append(d.username.strip())
+    if d.password:  # хоосон бол нууц үг хэвээр
+        fields.append("password_hash=?"); params.append(hash_password(d.password))
+    params.append(id)
+    try:
+        conn.execute(f"UPDATE user SET {', '.join(fields)} WHERE id=?", params)
+        conn.commit()
+    except sqlite3.IntegrityError as e:
+        conn.close()
+        msg = str(e)
+        if "phone" in msg:
+            raise HTTPException(400, "Утасны дугаар давхцаж байна")
+        if "username" in msg:
+            raise HTTPException(400, "Хэрэглэгчийн нэр давхцаж байна")
+        raise HTTPException(400, "Хадгалахад алдаа гарлаа")
+    conn.close()
+    return {"ok": True}
+
+
+@app.post("/api/users/{id}/active")
+def user_toggle_active(id: int, admin: dict = Depends(require_admin)):
+    if id == admin["id"]:
+        raise HTTPException(400, "Өөрийгөө идэвхгүй болгох боломжгүй")
+    conn = get_db()
+    row = conn.execute("SELECT active FROM user WHERE id=?", (id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Хэрэглэгч олдсонгүй")
+    new_active = 0 if row["active"] else 1
+    conn.execute("UPDATE user SET active=? WHERE id=?", (new_active, id))
+    conn.commit()
+    conn.close()
+    return {"active": new_active}
 
 
 # ── STATS ──
@@ -185,7 +303,8 @@ def horse_list(
     active: Optional[int]=1,
     limit: int=50,
     offset: int=0,
-    export: int=0
+    export: int=0,
+    user: dict = Depends(current_user)
 ):
     conn = get_db()
     sql = """SELECT a.id,a.name,a.sex,a.birth_date,a.status,a.registration_code,a.registration_code AS horse_id,a.number,
@@ -203,6 +322,23 @@ def horse_list(
         LEFT JOIN horse m ON a.dam_id=m.id
         WHERE (? IS NULL OR a.active=?)"""
     p = [active, active]
+    # ── Ролийн адуу-харах эрх ──
+    # admin/guest: бүгд. owner/trainer/herder: зөвхөн холбогдсон адуу.
+    # Холбоос (contact_id/trainer_id) NULL бол юу ч харуулахгүй (аюулгүйн тал руу).
+    role = user.get("role")
+    if role == "owner":
+        cid = user.get("contact_id")
+        if cid is None: sql += " AND 1=0"
+        else: sql += " AND EXISTS(SELECT 1 FROM horse_owner ho WHERE ho.horse_id=a.id AND ho.owner_id=?)"; p.append(cid)
+    elif role == "trainer":
+        tid = user.get("trainer_id")
+        if tid is None: sql += " AND 1=0"
+        else: sql += " AND EXISTS(SELECT 1 FROM horse_trainer ht WHERE ht.horse_id=a.id AND ht.trainer_id=? AND ht.active=1)"; p.append(tid)
+    elif role == "herder":
+        cid = user.get("contact_id")
+        if cid is None: sql += " AND 1=0"
+        else: sql += " AND EXISTS(SELECT 1 FROM horse_herder hh WHERE hh.horse_id=a.id AND hh.herder_id=? AND hh.active=1)"; p.append(cid)
+    # admin, guest, бусад → нэмэлт filter байхгүй (бүгд)
     if name: sql += " AND UPPER(a.name) LIKE UPPER(?)"; p.append(f"%{name}%")
     if horse_id: sql += " AND a.registration_code LIKE ?"; p.append(f"%{horse_id}%")
     if number: sql += " AND a.number LIKE ?"; p.append(f"%{number}%")

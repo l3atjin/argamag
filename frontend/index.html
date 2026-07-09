@@ -314,8 +314,8 @@ textarea.form-control{resize:vertical;min-height:60px}
       <div style="font-size:11px;color:#888">Equine Registry</div>
     </div>
     <div style="margin-bottom:14px">
-      <label style="display:block;font-size:12px;color:#555;margin-bottom:4px">Хэрэглэгчийн нэр</label>
-      <input id="login-username" type="text" autocomplete="username" required autofocus
+      <label style="display:block;font-size:12px;color:#555;margin-bottom:4px">Утас эсвэл хэрэглэгчийн нэр</label>
+      <input id="login-username" type="text" autocomplete="username" required autofocus placeholder="Утасны дугаар эсвэл нэр"
              style="width:100%;padding:9px 11px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box">
     </div>
     <div style="margin-bottom:18px">
@@ -6682,6 +6682,11 @@ async function renderTohiruulga() {
 
   mc.innerHTML = '';
 
+  // ── Хэрэглэгчид (зөвхөн admin) ──
+  if (window._currentUser && window._currentUser.role === 'admin') {
+    await renderUsersCard(mc, contactAll, trainerAll);
+  }
+
   // Уяачийн блок
   const trainerDiv = document.createElement('div');
   trainerDiv.className = 'card';
@@ -7485,6 +7490,117 @@ async function deleteUyaach(id, name) {
   if (!confirm(`"${name}" уяачийг устгах уу?`)) return;
   await api('/api/trainers/'+id, {method:'DELETE'});
   notify('Устгагдлаа!'); renderUyaach();
+}
+
+// ── ХЭРЭГЛЭГЧ УДИРДАХ (зөвхөн admin) ──
+const ROLE_LBL = {admin:'Админ', owner:'Эзэмшигч', trainer:'Уяач', herder:'Малчин', guest:'Зочин'};
+const ROLE_COLOR = {admin:'#B8860B', owner:'#378ADD', trainer:'#7F77DD', herder:'#1D9E75', guest:'#888'};
+
+function _apiErr(e) { let m=e&&e.message||'Алдаа'; try{ m=JSON.parse(e.message).detail||m; }catch(_){}; return m; }
+
+async function renderUsersCard(mc, contactAll, trainerAll) {
+  let users = [];
+  try { users = await api('/api/users'); } catch(e){ return; }
+  window._usersCache = users;
+  window._contactAll = contactAll;
+  window._trainerAll = trainerAll;
+
+  const lbl = document.createElement('div');
+  lbl.className = 'section-lbl';
+  lbl.textContent = '👤 Хэрэглэгчид';
+  mc.appendChild(lbl);
+
+  const grid = document.createElement('div');
+  grid.className = 'cards-grid';
+  const div = document.createElement('div');
+  div.className = 'card';
+  div.style.cursor = 'default';
+  let html = '<div class="card-title">Системийн хэрэглэгчид</div><div style="max-height:300px;overflow-y:auto;margin:8px 0">';
+  if (users.length) {
+    users.forEach(u => {
+      const link = u.role==='trainer' ? (u.trainer_name||'') : ((u.role==='owner'||u.role==='herder') ? (u.contact_name||'') : '');
+      const rc = ROLE_COLOR[u.role]||'#888';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid var(--gray-ll)'+(u.active?'':';opacity:0.5')+'">';
+      html += '<div><div style="font-weight:600">'+(u.full_name||u.username||'')+(u.active?'':' <span style="color:var(--red);font-size:10px">(идэвхгүй)</span>')+'</div>';
+      html += '<div style="font-size:10px;color:var(--text-ss)">'+(u.phone?('📞 '+u.phone+' · '):'')+(link?(link+' · '):'')+'@'+(u.username||'')+'</div></div>';
+      html += '<div style="display:flex;gap:6px;align-items:center">';
+      html += '<span class="gen-tag" style="background:'+rc+'22;color:'+rc+'">'+(ROLE_LBL[u.role]||u.role)+'</span>';
+      html += '<button class="btn-icon" style="font-size:11px;color:var(--amber-d)" data-action="edit" data-id="'+u.id+'">✏️</button>';
+      html += '<button class="btn-icon" style="font-size:12px" data-action="toggle" data-id="'+u.id+'" title="'+(u.active?'Идэвхгүй болгох':'Идэвхжүүлэх')+'">'+(u.active?'🚫':'✅')+'</button>';
+      html += '</div></div>';
+    });
+  } else {
+    html += '<div style="font-size:11px;color:var(--text-ss)">Хоосон</div>';
+  }
+  html += '</div><button class="btn btn-outline btn-sm" data-action="add">＋ Шинэ хэрэглэгч</button>';
+  div.innerHTML = html;
+  div.querySelector('[data-action="add"]').onclick = () => openUserModal(null);
+  div.querySelectorAll('[data-action="edit"]').forEach(b => b.onclick = () => openUserModal(+b.dataset.id));
+  div.querySelectorAll('[data-action="toggle"]').forEach(b => b.onclick = () => toggleUserActive(+b.dataset.id));
+  grid.appendChild(div);
+  mc.appendChild(grid);
+}
+
+async function toggleUserActive(id) {
+  const u = (window._usersCache||[]).find(x=>x.id===id);
+  if (u && !confirm('"'+(u.full_name||u.username)+'" хэрэглэгчийг '+(u.active?'идэвхгүй болгох':'идэвхжүүлэх')+' үү?')) return;
+  try {
+    await api('/api/users/'+id+'/active', {method:'POST'});
+    notify('Хадгалагдлаа!'); renderTohiruulga();
+  } catch(e) { notify(_apiErr(e),'err'); }
+}
+
+function userRoleChange() {
+  const role = document.getElementById('q-us-role').value;
+  document.getElementById('q-us-contact-wrap').style.display = (role==='owner'||role==='herder') ? '' : 'none';
+  document.getElementById('q-us-trainer-wrap').style.display = (role==='trainer') ? '' : 'none';
+}
+
+function openUserModal(id) {
+  const users = window._usersCache||[];
+  const contactAll = window._contactAll||[];
+  const trainerAll = window._trainerAll||[];
+  const u = id ? users.find(x=>x.id===id) : null;
+  const curRole = u ? u.role : 'guest';
+  const roleOpts = Object.entries(ROLE_LBL).map(([v,l])=>'<option value="'+v+'"'+(curRole===v?' selected':'')+'>'+l+'</option>').join('');
+  const contactOpts = '<option value="">— сонгох —</option>'+contactAll.map(c=>'<option value="'+c.id+'"'+(u&&u.contact_id===c.id?' selected':'')+'>'+c.name+'</option>').join('');
+  const trainerOpts = '<option value="">— сонгох —</option>'+trainerAll.map(t=>'<option value="'+t.id+'"'+(u&&u.trainer_id===t.id?' selected':'')+'>'+t.name+'</option>').join('');
+  showQuick(id?'Хэрэглэгч засах':'Шинэ хэрэглэгч', `
+    <div class="form-group"><label class="form-label">Нэр</label>
+      <input type="text" class="form-control" id="q-us-name" value="${u?.full_name||''}"></div>
+    <div class="form-group"><label class="form-label">Утасны дугаар *</label>
+      <input type="text" class="form-control" id="q-us-phone" value="${u?.phone||''}" placeholder="Нэвтрэхэд ашиглана"></div>
+    <div class="form-group"><label class="form-label">Нууц үг ${id?'<span style="color:var(--text-ss);font-weight:400">(хоосон бол хэвээр)</span>':'*'}</label>
+      <input type="password" class="form-control" id="q-us-pass" autocomplete="new-password"></div>
+    <div class="form-group"><label class="form-label">Роль</label>
+      <select class="form-control" id="q-us-role" onchange="userRoleChange()">${roleOpts}</select></div>
+    <div class="form-group" id="q-us-contact-wrap" style="display:none"><label class="form-label">Холбох хүн (эзэн/малчин)</label>
+      <select class="form-control" id="q-us-contact">${contactOpts}</select></div>
+    <div class="form-group" id="q-us-trainer-wrap" style="display:none"><label class="form-label">Холбох уяач</label>
+      <select class="form-control" id="q-us-trainer">${trainerOpts}</select></div>`,
+  async () => {
+    const phone = document.getElementById('q-us-phone').value.trim();
+    const pass = document.getElementById('q-us-pass').value;
+    const role = document.getElementById('q-us-role').value;
+    if (!phone) { notify('Утасны дугаар оруулна уу!','err'); return; }
+    if (!id && !pass) { notify('Нууц үг оруулна уу!','err'); return; }
+    const contactSel = document.getElementById('q-us-contact').value;
+    const trainerSel = document.getElementById('q-us-trainer').value;
+    const d = {
+      full_name: document.getElementById('q-us-name').value.trim()||null,
+      phone: phone||null,
+      role,
+      contact_id: (role==='owner'||role==='herder') && contactSel ? parseInt(contactSel) : null,
+      trainer_id: role==='trainer' && trainerSel ? parseInt(trainerSel) : null
+    };
+    if (pass) d.password = pass;
+    try {
+      if (id) await api('/api/users/'+id, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+      else await api('/api/users', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+      closeQuick(); notify('Хадгалагдлаа!'); renderTohiruulga();
+    } catch(e) { notify(_apiErr(e),'err'); }
+  });
+  setTimeout(userRoleChange, 30);
 }
 
 async function openAduuNemehUyaach(trainer_id, trainer_name) {

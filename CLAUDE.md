@@ -15,11 +15,58 @@
 - **Server restart:** `lsof -ti:8000 | xargs kill -9 && sleep 1 && python3 -m uvicorn backend.main:app --port 8000 --reload`
 
 ## DB-ийн чухал дүрмүүд
-- `aduu.aduu_id` = хэрэглэгчийн харах ID (текст, жишээ нь "107006")
-- `aduu.id` = системийн integer ID
-- SQL-д **заавал alias** хэрэглэх: `aduu.id as system_id, aduu.aduu_id as horse_code` — SQLite column override bug гардаг
+- **Гол хүснэгт нь `horse`** (хуучин баримтад `aduu` гэж байсан — DB бүхэлдээ Англи нэртэй)
+- `horse.id` = системийн integer ID (PK)
+- `horse.registration_code` = хэрэглэгчийн харах бүртгэлийн код (текст, жишээ нь "107006"); `horse.number` = № дугаар
+- SQL-д **заавал alias** хэрэглэх: `a.id, a.registration_code AS horse_id` — SQLite column override bug гардаг (`horse_list` дотор энэ pattern хэрэглэсэн)
 - **Cyrillic:** SQLite-ийн `UPPER()`/`LOWER()` Кирилл үсэгтэй ажиллахгүй → `database.py`-д `conn.create_function("LOWER", 1, lambda x: x.lower() if x else x)` хэрэглэнэ
-- **Lineage адуу:** `idevhtei=0`, `status='udam'` — үндсэн жагсаалтад харагдахгүй, гэхдээ эцэг эх болгон холбоно
+- **Удмын (lineage) адуу:** `active=0`, `status='pedigree'` — үндсэн жагсаалтад харагдахгүй, гэхдээ эцэг эх болгон холбоно (`horse_list` default `active=1`)
+
+## Нэвтрэх эрх / Роль систем (auth)
+Session-cookie дээр суурилсан нэвтрэлт + рольд суурилсан адуу-харах эрх. `backend/auth.py` (primitives), `backend/main.py` (endpoints), `frontend/index.html` (login screen + admin UI).
+
+### Хэрэглэгчийн хүснэгт (`user`)
+```
+id, username (UNIQUE), password_hash (bcrypt), full_name, created_at, active,
+role DEFAULT 'guest', phone, contact_id → contact.id, trainer_id → trainer.id
+```
+- `phone` дээр UNIQUE index (`idx_user_phone`; NULL олон байж болно)
+- 5 роль: `admin, owner, trainer, herder, guest`
+- Migration: `python backend/migrate_auth.py` (idempotent, non-destructive)
+
+### Холбоосын хүснэгтүүд
+- **Уяач↔адуу:** `horse_trainer` (M:N, start/end date, active)
+- **Эзэмшигч↔адуу:** `horse_owner` (M:N, `owner_id` → contact.id, share_percent)
+- **Малчин↔адуу:** `horse_herder` (M:N junction — ШИНЭ; `horse.herder_id`-г энд backfill хийсэн, эх багана устгаагүй)
+
+### Ролийн адуу-харах filter (`horse_list`)
+`horse_list`-д `user: dict = Depends(current_user)` авч `EXISTS` subquery-ээр шүүнэ:
+- `admin`, `guest` → бүх адуу
+- `owner` → `horse_owner.owner_id = user.contact_id`
+- `trainer` → `horse_trainer.trainer_id = user.trainer_id` (active=1)
+- `herder` → `horse_herder.herder_id = user.contact_id` (active=1)
+- Холбоос (`contact_id`/`trainer_id`) NULL бол `AND 1=0` → юу ч харуулахгүй (аюулгүйн тал руу)
+- ⚠️ Scope: одоохондоо зөвхөн `horse_list`. `horse_detail`, `/export/csv`, `/api/stats` **filter хийгдээгүй**
+
+### API endpoints
+| Method | Path | Эрх | Зориулалт |
+|---|---|---|---|
+| POST | `/api/auth/login` | нээлттэй | Утас **эсвэл** username + нууц үг. Хариу: `{username, full_name, role}` |
+| POST | `/api/auth/logout` | нээлттэй | Session цэвэрлэх |
+| GET | `/api/auth/me` | нэвтэрсэн | `{username, full_name, role}` |
+| GET | `/api/users` | **admin** | Хэрэглэгчид (+ contact/trainer нэр) |
+| POST | `/api/users` | **admin** | Шинэ хэрэглэгч (phone→username авто) |
+| PUT | `/api/users/{id}` | **admin** | Засах (password хоосон→хэвээр) |
+| POST | `/api/users/{id}/active` | **admin** | Идэвх toggle (өөрийгөө болгохыг блоклоно) |
+
+- **`require_admin`** dependency: admin биш бол 403
+- **Login:** `WHERE username=? OR phone=? ORDER BY (username=?) DESC` — утас нь өөр username-тэй давхацвал username-г эхэлж сонгоно
+- Middleware (`AuthMiddleware`): `/api/*` бүгд session шаардана (auth endpoint-оос бусад)
+
+### Frontend admin UI
+- Тохируулга хуудасны дээд талд "👤 Хэрэглэгчид" карт — **зөвхөн `window._currentUser.role==='admin'`** үед
+- `renderUsersCard`, `openUserModal` (showQuick модал), `toggleUserActive`, `userRoleChange`, `_apiErr`
+- Модал: роль сонголтоор contact picker (owner/herder) эсвэл trainer picker (trainer) динамик харагдана (одоохондоо native `<select>`)
 
 ## Кодлох дүрмүүд (заавал дагах)
 1. **Нэг өөрчлөлт нэг удаа** — олон зүйл нэгэн зэрэг бүү өөрчил, debug хэцүү болно
@@ -27,7 +74,7 @@
 3. **JS pattern** — `createElement` + `addEventListener` хэрэглэ, `innerHTML` string concatenation бүү хэрэглэ (quote-escaping асуудал гардаг)
 4. **Cyrillic** — дээрхийг үз
 5. **Backup** — өөрчлөлтөөс өмнө ZIP хадгал (`~/Desktop/horse_YYYYMMDD.zip`)
-6. **Verification** — backend өөрчилсний дараа шалга: `python3 -c "from backend.main import aduu_list; r=aduu_list(limit=1); assert r['total']>0"`
+6. **Verification** — backend өөрчилсний дараа шалга: `python3 -c "from backend.main import horse_list; r=horse_list(user={'role':'admin'}); assert r['total']>0"`
 7. **Inspect before edit** — `sed -n 'START,ENDp' file` ашиглан тухайн мөрүүдийг уншсаны дараа засварла
 
 ## Одоогийн модулиуд
@@ -35,12 +82,13 @@
 |---|---|
 | Адуу бүртгэл | ✅ Ажиллаж байна (368 адуу) |
 | Сүрэг удирдлага | ✅ Ажиллаж байна (24 сүрэг) |
-| Уралдааны үр дүн | ✅ `sungaa` хүснэгт — цорын ганц эх үүсвэр |
+| Уралдааны үр дүн | ✅ `practice_race` хүснэгт — гол эх үүсвэр (`/api/practice_races`, `renderSungaa`); `race` нь туслах |
 | Удмын мод | ✅ 5 үе |
 | Морь сойх | ✅ |
 | Dashboard | ✅ Насны бүтэц, өсөлт, зүс, угшил |
 | Арчилгааны хуваарь | 🔧 Хийж байгаа |
 | Санхүү | 📋 Sidebar-д байгаа, хийгдээгүй |
+| Нэвтрэх эрх / Роль | ✅ Session-cookie нэвтрэлт, 5 роль, адуу-харах filter, admin UI (доор үз) |
 
 ## Адууны профайлын табууд
 
@@ -83,7 +131,7 @@ CREATE TABLE tasks (
 CREATE TABLE task_horses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     task_id INTEGER REFERENCES tasks(id),
-    horse_id INTEGER REFERENCES aduu(id)
+    horse_id INTEGER REFERENCES horse(id)
 );
 
 CREATE TABLE task_logs (

@@ -74,7 +74,8 @@ def current_user(request: Request) -> dict:
         raise HTTPException(401, "Invalid or expired session")
     conn = get_db()
     row = conn.execute(
-        "SELECT id, username, full_name, active FROM user WHERE id=?", (user_id,)
+        "SELECT id, username, full_name, active, role, contact_id, trainer_id "
+        "FROM user WHERE id=?", (user_id,)
     ).fetchone()
     conn.close()
     if not row or not row["active"]:

@@ -324,6 +324,19 @@ def init_db():
         password_hash TEXT NOT NULL,
         full_name TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        active INTEGER DEFAULT 1,
+        role TEXT DEFAULT 'guest',   -- 'admin','owner','trainer','herder','guest'
+        phone TEXT,                  -- login via phone; UNIQUE enforced by index below
+        contact_id INTEGER,          -- -> contact.id (owner/herder link)
+        trainer_id INTEGER           -- -> trainer.id (trainer link)
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_user_phone ON user(phone);
+
+    -- ── HORSE ↔ HERDER (junction, mirrors horse_trainer) ──
+    CREATE TABLE IF NOT EXISTS horse_herder (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        horse_id INTEGER, herder_id INTEGER,
+        start_date TEXT, end_date TEXT,
         active INTEGER DEFAULT 1
     );
 
