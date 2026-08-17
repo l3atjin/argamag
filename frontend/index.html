@@ -903,7 +903,7 @@ async function renderSurgHerdList() {
 async function showSurgDetail(id) {
   const horse = await api('/api/horses?herd_id='+id+'&limit=200');
   openPanel('Сүргийн адуу', '<div class="section-lbl">Нийт '+horse.total+' адуу</div>' +
-    horse.data.map(a => '<div class="info-row"><span class="t-name" onclick="openDetail('+a.id+')">'+horseNer(a.name,a.birth_date,a.sex,a.gelded)+'</span><span>'+sexBadge(a.sex)+'</span></div>').join(''));
+    horse.data.map(a => '<div class="info-row"><span class="t-name" onclick="navigateTo(\'/horses/\'+'+a.id+')">'+horseNer(a.name,a.birth_date,a.sex,a.gelded)+'</span><span>'+sexBadge(a.sex)+'</span></div>').join(''));
 }
 
 function viewSurgAduu(id, name) { navigateTo('/horses'); }
@@ -1004,7 +1004,7 @@ async function fetchAduuTable() {
   let rows = '';
   if (d.data.length) {
     rows = d.data.map(h =>
-      '<tr><td><div class="t-name" onclick="openDetail('+h.id+')">'+(h.important?'<span style="color:#BA7517;margin-right:4px" title="Чухал удмын адуу">★</span>':'')+horseNer(h.name,h.birth_date,h.sex,h.gelded)+'</div></td>' +
+      '<tr><td><div class="t-name" onclick="navigateTo(\'/horses/\'+'+h.id+')">'+(h.important?'<span style="color:#BA7517;margin-right:4px" title="Чухал удмын адуу">★</span>':'')+horseNer(h.name,h.birth_date,h.sex,h.gelded)+'</div></td>' +
       '<td><div style="font-size:12px;font-weight:600;color:var(--amber-d)">'+(h.horse_id||'—')+'</div></td>' +
       '<td><div style="font-size:12px;color:var(--text-s)">'+(h.number||'—')+'</div></td>' +
       '<td>'+sexBadge(h.sex)+'</td>' +
@@ -1265,7 +1265,6 @@ async function openDetailFullscreen(h, pedigree) {
       sexBadge(h.sex) + ' ' + statusBadge(h.status) +
       '<button onclick="editCurrentAduu()" style="background:#fff;border:1px solid #d0ccc4;border-radius:7px;padding:6px 14px;cursor:pointer;font-size:12px;color:#555">✏️ Засах</button>' +
       (h.sex==='stallion'?'<button data-hid="'+h.id+'" data-hner="'+encodeURIComponent(h.name)+'" onclick="openHongolSingle(parseInt(this.dataset.hid),decodeURIComponent(this.dataset.hner))" style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:7px;padding:6px 14px;cursor:pointer;font-size:12px;color:#92400E;font-weight:600">🔪 Хөнгөлөх</button>':'') +
-      '<button onclick="closeDetailFs()" style="background:#fff;border:1px solid #d0ccc4;border-radius:7px;padding:6px 14px;cursor:pointer;font-size:12px;color:#555">✕ Хаах</button>' +
     '</div>';
 
   // Tab хэсэг
@@ -1286,6 +1285,7 @@ async function openDetailFullscreen(h, pedigree) {
 
   // Body
   const body = document.createElement('div');
+  body.id = 'detail-fs-body';
   body.style.cssText = 'flex:1;overflow-y:auto';
 
   // Дэд-таб (pill) мөр үүсгэх
@@ -1706,7 +1706,7 @@ async function openDetailFullscreen(h, pedigree) {
       '<th style="padding:7px 10px;text-align:left;font-weight:600">ID</th>' +
       '</tr></thead><tbody>';
     data.forEach(a => {
-      html += '<tr style="border-bottom:1px solid var(--gray-l);cursor:pointer" onclick="closeDetailFs();openDetail('+a.id+')">' +
+      html += '<tr style="border-bottom:1px solid var(--gray-l);cursor:pointer" onclick="navigateTo(\'/horses/\'+'+a.id+')">' +
         '<td style="padding:7px 10px;font-weight:600;color:var(--amber-d)">'+horseNer(a.name,a.birth_date,a.sex,a.gelded)+'</td>' +
         '<td style="padding:7px 10px">'+sexBadge(a.sex)+'</td>' +
         '<td style="padding:7px 10px;color:#888">'+(a.birth_date?a.birth_date.substring(0,10):'—')+'</td>' +
@@ -3595,7 +3595,7 @@ async function renderMoriSoikh() {
       // Адуу header
       html += '<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--gray-ll);border-bottom:0.5px solid var(--border)">';
       html += '<div style="flex:1">';
-      html += '<div style="font-size:14px;font-weight:500;color:#854F0B;cursor:pointer" onclick="openDetail('+a.id+')">'+a.name+'</div>';
+      html += '<div style="font-size:14px;font-weight:500;color:#854F0B;cursor:pointer" onclick="navigateTo(\'/horses/\'+'+a.id+')">'+a.name+'</div>';
       html += '<div style="font-size:11px;color:var(--text-ss);margin-top:2px">'+(a.registration_code||'')+(a.color_name?' · '+a.color_name:'')+(a.sex?' · '+a.sex:'')+'</div>';
       html += '</div>';
       // Polar мини
@@ -4345,7 +4345,7 @@ async function loadMoriSoikhAduu(trainer_id, todayRec) {
     html += '<div style="flex:1">';
     html += '<div style="display:flex;align-items:center;gap:6px">';
     if(a.important) html += '<i class="ti ti-star-filled" style="font-size:13px;color:var(--amber)" aria-hidden="true"></i>';
-    html += '<span style="font-size:14px;font-weight:700;color:var(--amber-d);cursor:pointer" onclick="openDetail('+a.id+')" title="Дэлгэрэнгүй харах">'+a.name+'</span>';
+    html += '<span style="font-size:14px;font-weight:700;color:var(--amber-d);cursor:pointer" onclick="navigateTo(\'/horses/\'+'+a.id+')" title="Дэлгэрэнгүй харах">'+a.name+'</span>';
     html += '</div>';
     html += '<div style="font-size:11px;color:var(--text-ss);margin-top:2px">'+ageNershil(a.birth_date,a.sex,a.gelded)+'</div>';
     html += '</div>';
@@ -4579,7 +4579,7 @@ async function searchMoriSoikhAduu() {
   if (!data.data.length) { res.innerHTML='<div style="font-size:12px;color:#aaa">Олдсонгүй</div>'; return; }
   res.innerHTML = data.data.map(a=>
     '<div style="padding:6px 10px;cursor:pointer;font-size:12px;background:var(--card);border:0.5px solid var(--border);border-radius:6px;margin-bottom:4px" '+
-    'onclick="openDetail('+a.id+')">'+(a.important?'★ ':'')+a.name+
+    'onclick="navigateTo(\'/horses/\'+'+a.id+')">'+(a.important?'★ ':'')+a.name+
     '<span style="color:#aaa;margin-left:8px">'+ageNershil(a.birth_date,a.sex,0)+'</span></div>'
   ).join('');
 }
@@ -4711,7 +4711,7 @@ function renderUdamTree(root) {
       } else {
         const h5 = (u === MAX_UE) ? 'height:6mm;' : '';
         html += '<td rowspan="'+rs+'" style="'+h5+'padding:5px 8px;border:1px solid '+brd+';background:'+bg+';vertical-align:middle">' +
-          '<div style="font-weight:700;font-size:11px;cursor:pointer;line-height:1.4;color:'+nameClr+'" onclick="closeUdamFullscreen();closeDetailFs();openDetail('+n.id+')">'+(n.important?'<span style="color:#BA7517;margin-right:3px">★</span>':'')+n.name+'</div>' +
+          '<div style="font-weight:700;font-size:11px;cursor:pointer;line-height:1.4;color:'+nameClr+'" onclick="navigateTo(\'/horses/\'+'+n.id+')">'+(n.important?'<span style="color:#BA7517;margin-right:3px">★</span>':'')+n.name+'</div>' +
           '<div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap;align-items:center">' +
             (n.birth_date?'<span style="font-weight:700;font-size:10px;color:#1a1a1a">'+n.birth_date.substring(0,4)+'</span>':'') +
             (n.horse_id?'<span style="font-weight:700;font-size:10px;color:#1a1a1a;background:rgba(0,0,0,0.08);border-radius:3px;padding:1px 4px">'+n.horse_id+'</span>':'') +
@@ -6306,7 +6306,7 @@ async function renderSungaa() {
       t += '<tr style="border-bottom:1px solid var(--gray-l)" onmouseover="this.style.background=\'var(--gray-ll)\'" onmouseout="this.style.background=\'\'">';
       t += '<td style="padding:9px 10px;color:#888;font-size:11px;white-space:nowrap;vertical-align:top">'+(s.date||'—')+'</td>';
       t += '<td style="padding:9px 10px;vertical-align:top">';
-      t += '<div style="font-size:13px;font-weight:600;color:#854F0B;cursor:pointer" onclick="openDetail('+s.horse_id+');setTimeout(function(){switchDetailTab(1)},300)">'+horseNer(s.horse_name,s.horse_birth_date,s.horse_sex,s.horse_gelded)+'</div>';
+      t += '<div style="font-size:13px;font-weight:600;color:#854F0B;cursor:pointer" onclick="navigateTo(\'/horses/\'+'+s.horse_id+');setTimeout(function(){switchDetailTab(1)},300)">'+horseNer(s.horse_name,s.horse_birth_date,s.horse_sex,s.horse_gelded)+'</div>';
       t += '<div style="font-size:11px;color:#aaa;margin-top:2px">'+sub+'</div>';
       t += '</td>';
       t += '<td style="padding:9px 10px;font-size:11px;color:#888;vertical-align:top;white-space:nowrap">'+(s.horse_sys_id||'—')+'</td>';
@@ -7509,7 +7509,7 @@ async function openUyaachDetail(id) {
       <div class="section-lbl">🐴 Хариуцаж байгаа адуу (${u.horse?.length||0})</div>
       ${u.horse?.length ? u.horse.map(a=>`
         <div class="info-row">
-          <span class="t-name" onclick="openDetail(${a.id})">${a.name}</span>
+          <span class="t-name" onclick="navigateTo('/horses/${a.id}')">${a.name}</span>
           <span style="font-size:11px;color:#888">${a.start_date||'—'}</span>
         </div>`).join('') : '<div style="color:#aaa;font-size:12px">Адуу байхгүй</div>'}
     </div>
@@ -7915,7 +7915,7 @@ async function loadNaadamDetail(id, container) {
       html += '</div>';
       // Адуу нэр
       html += '<div style="flex:1;min-width:0">';
-      html += '<div style="font-size:13px;font-weight:600;color:var(--amber-d);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onclick="openDetail('+s.horse_id+')">'+(s.horse_name||'—')+'</div>';
+      html += '<div style="font-size:13px;font-weight:600;color:var(--amber-d);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onclick="navigateTo(\'/horses/\'+'+s.horse_id+')">'+(s.horse_name||'—')+'</div>';
       html += '<div style="font-size:11px;color:var(--text-ss);margin-top:1px">';
       if(s.trainer_name) html += '<span>Уяач: '+s.trainer_name+'</span>';
       if(s.jockey) html += '<span style="margin-left:8px">Унаач: '+s.jockey+'</span>';
