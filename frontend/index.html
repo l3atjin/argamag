@@ -4655,7 +4655,7 @@ function irow(lbl, val) {
   return '<div class="info-row"><span class="info-lbl">'+lbl+'</span><span class="info-val">'+val+'</span></div>';
 }
 
-function renderUdamTree(root) {
+function renderUdamTree(root, inPedigreeView=false) {
   const MAX_UE = 5;
   const START_UE = 2;
   const COLS = MAX_UE - START_UE + 1; // 4 багана
@@ -4711,7 +4711,7 @@ function renderUdamTree(root) {
       } else {
         const h5 = (u === MAX_UE) ? 'height:6mm;' : '';
         html += '<td rowspan="'+rs+'" style="'+h5+'padding:5px 8px;border:1px solid '+brd+';background:'+bg+';vertical-align:middle">' +
-          '<div style="font-weight:700;font-size:11px;cursor:pointer;line-height:1.4;color:'+nameClr+'" onclick="navigateTo(\'/horses/\'+'+n.id+')">'+(n.important?'<span style="color:#BA7517;margin-right:3px">★</span>':'')+n.name+'</div>' +
+          '<div style="font-weight:700;font-size:11px;cursor:pointer;line-height:1.4;color:'+nameClr+'" onclick="navigateTo(\'/horses/\'+'+n.id+(inPedigreeView?'+\'/pedigree\'':'')+')">'+(n.important?'<span style="color:#BA7517;margin-right:3px">★</span>':'')+n.name+'</div>' +
           '<div style="margin-top:3px;display:flex;gap:3px;flex-wrap:wrap;align-items:center">' +
             (n.birth_date?'<span style="font-weight:700;font-size:10px;color:#1a1a1a">'+n.birth_date.substring(0,4)+'</span>':'') +
             (n.horse_id?'<span style="font-weight:700;font-size:10px;color:#1a1a1a;background:rgba(0,0,0,0.08);border-radius:3px;padding:1px 4px">'+n.horse_id+'</span>':'') +
@@ -4799,7 +4799,7 @@ function openUdamFullscreen() {
       // Удмын мод
       '<div style="border-top:1px solid #e0dbd0;padding-top:20px">' +
         '<div style="font-size:13px;font-weight:700;color:#5a5550;margin-bottom:12px;letter-spacing:0.02em">Удмын мод</div>' +
-        renderUdamTree(pedigree) +
+        renderUdamTree(pedigree, true) +
       '</div>' +
     '</div>';
   document.body.appendChild(div);
