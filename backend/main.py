@@ -2454,3 +2454,13 @@ def reports_daily_schedule(
     rows += [dict(r) for r in conn.execute(sql2+" ORDER BY ms.date DESC", params2).fetchall()]
     conn.close()
     return sorted(rows, key=lambda x: x['date'], reverse=True)
+
+
+# SPA fallback: URL-based routing-той frontend router-ийн замууд
+# (/horses, /horses/{id}, /schedule г.м.) refresh хийхэд index.html буцаана.
+# Файлын хамгийн сүүлд байх ёстой — эс тэгвэл дээрх @app.get route-уудыг дарж бичнэ.
+@app.get("/{full_path:path}")
+def spa_fallback(full_path: str):
+    if full_path.startswith(("api/", "static/", "uploads/")):
+        raise HTTPException(404)
+    return FileResponse(os.path.join(FRONTEND, "index.html"))
