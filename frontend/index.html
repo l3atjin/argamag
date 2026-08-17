@@ -1230,7 +1230,7 @@ async function openDetail(id) {
     ((h.head_marking||h.body_marking||h.leg_marking||h.brand)?
       '<div class="section-lbl">Содон тэмдэг</div>'+irow('Толгой',h.head_marking)+irow('Бие',h.body_marking)+irow('Хөл',h.leg_marking)+irow('Тамга',h.brand):'') +
     (h.notes?'<div style="margin-top:8px;font-size:11px;color:var(--text-s);line-height:1.6;background:var(--gray-l);padding:8px;border-radius:6px">'+h.notes+'</div>':'') +
-    '<button class="btn btn-outline" style="width:100%;justify-content:center;margin:12px 0;padding:11px;font-size:13px;font-weight:600" onclick="openUdamFullscreen()">🌳 Удмын мод</button>' +
+    '<button class="btn btn-outline" style="width:100%;justify-content:center;margin:12px 0;padding:11px;font-size:13px;font-weight:600" onclick="navigateTo(location.pathname+\'/pedigree\')">🌳 Удмын мод</button>' +
     (h.practice_race?.length?'<div class="section-lbl">🏆 Сүнгаа ('+h.practice_race.length+')</div>'+h.practice_race.map(s=>'<div class="comp-card"><div class="comp-distance_text">'+(s.distance_text||'—')+'</div><div class="comp-info">'+(s.type||'—')+(s.date?' · '+s.date.substring(0,4):'')+'</div>'+(s.notes?'<div class="comp-info">'+s.notes+'</div>':'')+'</div>').join(''):'') +
     '<div style="margin-top:14px;display:flex;gap:6px"><button class="btn btn-primary btn-sm" onclick="openUraldaanModal('+id+')">➕ Уралдаан нэмэх</button></div>';
 
@@ -4739,6 +4739,8 @@ function openPanel(title, body) {
 
 function openUdamFullscreen() {
   if (!window._currentDetailData) return;
+  const existing = document.getElementById('pedigree-fs');
+  if (existing) existing.remove();
   const h = window._currentDetailData;
   const pedigree = window._currentUdamData;
   const photos = h.photos || [];
@@ -4762,14 +4764,15 @@ function openUdamFullscreen() {
   div.className = 'pedigree-fullscreen';
   div.id = 'pedigree-fs';
   div.style.cssText = 'background:#f5f3ee';
+  const canGoBack = navStack.length > 1;
   div.innerHTML =
     // Header
     '<div style="background:#fff;padding:14px 32px;border-bottom:1px solid #e5e0d8;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10">' +
       '<div style="font-size:22px;font-weight:800;flex:1;color:#1a1a1a;letter-spacing:-0.3px">'+(h.important?'<span style="color:#BA7517;margin-right:6px">★</span>':'')+h.name+'</div>' +
-      '<button onclick="closeUdamFullscreen()" style="background:#fff;border:1px solid #d0ccc4;border-radius:7px;padding:7px 16px;cursor:pointer;font-size:12px;color:#555;font-weight:500">✕ Хаах</button>' +
+      (canGoBack?'<button onclick="history.back()" style="background:#fff;border:1px solid #d0ccc4;border-radius:7px;padding:7px 16px;cursor:pointer;font-size:12px;color:#555;font-weight:500">← Буцах</button>':'') +
     '</div>' +
     // Body
-    '<div style="padding:16px 32px;overflow-y:auto;height:calc(100vh - 57px)">' +
+    '<div id="pedigree-fs-body" style="padding:16px 32px;overflow-y:auto;height:calc(100vh - 57px)">' +
       // Top: мэдээлэл + зураг
       '<div style="display:grid;grid-template-columns:1fr 400px;gap:40px;margin-bottom:28px;align-items:start">' +
         // Зүүн: мэдээлэл
