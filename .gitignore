@@ -36,3 +36,6 @@ env/
 .vscode/
 .idea/
 *.swp
+
+# Local symlink to lamjav-standards (not committed, machine-local)
+web-app-standard.md

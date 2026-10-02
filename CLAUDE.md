@@ -1,3 +1,5 @@
+**⚠️ Веб апп хөгжүүлэлтийн ерөнхий стандартыг `~/Projects/lamjav-standards/web-app-standard.md`-аас уншиж дага.**
+
 # Argamag Equine Registry — Claude Code Context
 
 ## Системийн танилцуулга
