@@ -3,7 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Адууны Бүртгэл</title>
+<title>Argamag</title>
+<link rel="icon" href="/static/brand/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/static/brand/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png">
+<link rel="manifest" href="/static/brand/manifest.json">
+<meta name="theme-color" content="#1A1710">
+<meta name="apple-mobile-web-app-title" content="Argamag">
 <style>
 :root {
   --amber:#B8860B; --amber-l:#FDF3DC; --amber-d:#8B6508; --amber-m:#E5A820;
@@ -309,9 +315,7 @@ textarea.form-control{resize:vertical;min-height:60px}
 <div id="login-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:#f7f7f7;align-items:center;justify-content:center">
   <form onsubmit="doLogin(event)" style="background:#fff;padding:32px 28px;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.08);width:340px;max-width:90vw">
     <div style="text-align:center;margin-bottom:24px">
-      <div style="font-size:32px;margin-bottom:4px">🐎</div>
-      <div style="font-size:18px;font-weight:600">Аргамаг</div>
-      <div style="font-size:11px;color:#888">Equine Registry</div>
+      <img src="/static/brand/logo-login.svg" alt="Argamag — Equine Registry" style="width:190px;height:auto;display:block;margin:0 auto">
     </div>
     <div style="margin-bottom:14px">
       <label style="display:block;font-size:12px;color:#555;margin-bottom:4px">Утас эсвэл хэрэглэгчийн нэр</label>
@@ -330,8 +334,7 @@ textarea.form-control{resize:vertical;min-height:60px}
 
 <div class="sidebar">
   <div class="sidebar-logo">
-    <div class="sidebar-logo-title"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16' height='16'%3E%3Ctext y='18' font-size='18'%3E🐎%3C/text%3E%3C/svg%3E" style="vertical-align:middle;margin-right:4px"> Аргамаг</div>
-    <div class="sidebar-logo-sub">Equine Registry</div>
+    <img src="/static/brand/logo-sidebar.svg" alt="Argamag" style="height:36px;width:auto;display:block">
   </div>
   <nav class="sidebar-nav">
     <div class="nav-item active" onclick="navigateTo('/')"><span class="ni">📊</span> Тойм</div>
